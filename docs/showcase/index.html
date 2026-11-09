@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC 2-DOF Robotic Arm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: engineering case study — photo-led hero, then one ~760px reading column of chapters (build → simulate → size → control → results), each pairing short prose with real figures; wide figure grids break out to 1080px. */
+:root{
+  --bg:#F2F4F6; --surface:#FFFFFF; --ink:#17212C; --muted:#5B6876; --line:#D4DBE2; --soft:#E7ECF1;
+  --steel:#3F6185; --alu:#24877A; --accent:#D2601A; --bad:#BE3A2A; --good:#2E8B4E;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11171D; --surface:#19212A; --ink:#E3E9EF; --muted:#9AA7B4; --line:#2E3A46; --soft:#222C36;
+  --steel:#7FA3C9; --alu:#4FC0AE; --accent:#F08A46; --bad:#EE6A57; --good:#5CC17E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11171D; --surface:#19212A; --ink:#E3E9EF; --muted:#9AA7B4; --line:#2E3A46; --soft:#222C36;
+  --steel:#7FA3C9; --alu:#4FC0AE; --accent:#F08A46; --bad:#EE6A57; --good:#5CC17E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 72px}
+.wrap{max-width:780px;margin:0 auto;display:flex;flex-direction:column;gap:64px}
+.wide{width:min(1080px,calc(100vw - 32px));margin-left:50%;transform:translateX(-50%)}
+h1,h2,h3{font-family:var(--display);line-height:1.08;text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(2.6rem,8.5vw,4.2rem);font-weight:700}
+h2{font-size:clamp(1.9rem,5.5vw,2.5rem);font-weight:600}
+h3{font-size:1.35rem;font-weight:600}
+p{margin:0}
+a{color:var(--steel);text-underline-offset:3px}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section{display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:1.12rem;color:var(--muted);max-width:64ch}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0;margin:0}
+.fig svg{width:100%;height:auto;display:block}
+.cap,figcaption{font-size:.84rem;color:var(--muted)}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 14px}
+.note b{color:var(--accent)}
+.grid2.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media (max-width:520px){.grid2.two{grid-template-columns:1fr}}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.part{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.part .tag{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.chip{display:inline-block;font-family:var(--mono);font-size:.7rem;padding:1px 7px;border-radius:99px;color:#fff;vertical-align:middle}
+.chip.st{background:var(--steel)} .chip.al{background:var(--alu)}
+ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:440px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+td.mono{font-family:var(--mono);font-size:.84rem;white-space:nowrap}
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px}
+.heroimg{margin:0;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--surface)}
+.heroimg img{display:block;width:100%;height:auto}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+@media (max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.stat .v{font-family:var(--display);font-size:2rem;font-weight:700;line-height:1}
+.stat .v small{font-size:1rem;font-weight:600;color:var(--muted);margin-left:2px}
+.stat .k{font-size:.82rem;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:.92rem;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.links{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.85rem;text-decoration:none;padding:9px 14px;border-radius:4px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+/* photo pair */
+.photos{display:grid;grid-template-columns:2fr 1fr;gap:12px;align-items:stretch}
+@media (max-width:620px){.photos{grid-template-columns:1fr}}
+.photos figure{margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.photos img{width:100%;height:100%;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
+.photos .pw{flex:1;min-height:0}
+/* gallery */
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.shot{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.shot button{all:unset;cursor:zoom-in;display:block;border-radius:3px;overflow:hidden;background:#fff}
+.shot button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.shot img{display:block;width:100%;height:auto}
+.shot.tall img{max-height:520px;object-fit:contain;margin:0 auto}
+dialog{border:0;padding:0;background:transparent;max-width:min(1400px,96vw);max-height:94vh}
+dialog::backdrop{background:rgba(10,14,18,.86)}
+dialog img{display:block;max-width:100%;max-height:86vh;margin:0 auto;border-radius:4px;background:#fff}
+dialog p{color:#E3E9EF;font-size:.88rem;text-align:center;padding-top:10px}
+dialog form{position:absolute;top:8px;right:8px}
+dialog .x{background:#000a;color:#fff;border:0;border-radius:4px;padding:6px 10px;font-family:var(--mono);cursor:pointer}
+/* bars */
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:64px 1fr 92px;align-items:center;gap:10px;font-size:.88rem}
+.bar .lab{color:var(--muted)}
+.bar .track{height:14px;background:var(--soft);border-radius:2px;position:relative}
+.bar .fill{height:100%;border-radius:2px;display:block}
+.bar .val{font-family:var(--mono);font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--bad)}
+/* process */
+.process{display:grid;grid-template-columns:repeat(4,1fr);gap:0;counter-reset:p}
+@media (max-width:620px){.process{grid-template-columns:1fr 1fr;row-gap:16px}}
+.process div{padding:0 14px 0 0;display:flex;flex-direction:column;gap:4px;border-top:3px solid var(--line);padding-top:10px}
+.process div:first-child{border-top-color:var(--accent)}
+.process b{font-family:var(--display);font-size:1.2rem;font-weight:600}
+.process span{font-size:.88rem;color:var(--muted)}
+.process em{font-family:var(--mono);font-style:normal;font-size:.7rem;color:var(--muted);letter-spacing:.08em}
+/* player */
+.views{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media (max-width:540px){.views{grid-template-columns:1fr}}
+.view{border:1px solid var(--line);border-radius:4px;padding:8px;min-width:0}
+.view .vt{font-family:var(--mono);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+button.play{font-family:var(--mono);font-size:.85rem;background:var(--ink);color:var(--bg);border:0;border-radius:4px;padding:8px 14px;cursor:pointer}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:480px){.readout{grid-template-columns:repeat(2,1fr)}}
+.ro{background:var(--soft);border-radius:4px;padding:8px 10px}
+.ro .k{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ro .v{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.formula{font-family:var(--mono);font-size:.9rem;background:var(--soft);border-radius:4px;padding:10px 14px;overflow-x:auto;white-space:nowrap}
+.flags{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.flag{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.flag b{font-family:var(--display);font-size:1.12rem;font-weight:600}
+.flag span{font-size:.9rem;color:var(--muted)}
+.team{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.person{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px}
+.person b{display:block;font-size:1.05rem}
+.person span{font-family:var(--mono);font-size:.78rem;color:var(--muted)}
+.skills{display:flex;flex-wrap:wrap;gap:8px}
+.skills span{font-size:.84rem;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface)}
+footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}
+svg text{font-family:var(--mono)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow">Project case study · Mechatronics & Automation · VIT Chennai</span>
+  <h1>A PLC-controlled 2-DOF robotic arm, designed by simulation</h1>
+  <p class="lede">A two-axis pick-and-place arm that lifts a 5&nbsp;kg ferrous part with an electromagnet, swings it 90° and sets it down. The structure was checked in Ansys before building, those results set the motor sizes, and the arm runs on an industrial PLC with a touch-panel HMI. It has been built and tested on the bench.</p>
+  <figure class="heroimg"><img src="img/arm-photo-side.jpg" alt="The built 2-DOF robotic arm: black steel base with a 2DOF ROBOTIC ARM label, base servo, shoulder servo, long aluminium Link-1 and the electromagnet at the end" width="1600" height="1200"></figure>
+  <div class="stats">
+    <div class="stat"><span class="v">5<small>kg</small></span><span class="k">Design payload (electromagnet)</span></div>
+    <div class="stat"><span class="v">420<small>mm</small></span><span class="k">Reach, shoulder to tool point</span></div>
+    <div class="stat"><span class="v">0.085<small>mm</small></span><span class="k">Max simulated deflection</span></div>
+    <div class="stat"><span class="v">4.63</span><span class="k">Min factor of safety (joint)</span></div>
+    <div class="stat"><span class="v">2</span><span class="k">Harmonic-drive servo axes</span></div>
+    <div class="stat"><span class="v">200<small>kHz</small></span><span class="k">PLC pulse outputs</span></div>
+  </div>
+  <div class="meta">
+    <span><b>Team</b> Mithunvel K L (23BMH1029) · Vaishnav V G (24BMH1035) · Nadraj</span>
+    <span><b>Tools</b> Ansys Mechanical 2023 R1 · KincoBuilder · KincoDTools</span>
+  </div>
+  <div class="links">
+    <a class="btn primary" href="https://github.com/KL-Mithunvel/PLC-2-DOF-manipulator" target="_blank" rel="noopener">GitHub repository ↗</a>
+    <a class="btn" href="https://github.com/KL-Mithunvel/PLC-2-DOF-manipulator/tree/main/docs/paper" target="_blank" rel="noopener">Technical paper (PDF) ↗</a>
+    <a class="btn" href="https://github.com/KL-Mithunvel/PLC-2-DOF-manipulator/tree/main/docs" target="_blank" rel="noopener">Drawings & datasheets ↗</a>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">In short</span>
+  <h2>What this project shows</h2>
+  <div class="grid2 two">
+    <div class="part"><span class="tag">Structural simulation</span><p>Static and transient FEA in Ansys of a 5-body model across a full 120&nbsp;s pick-and-place cycle. Found the weakest part and its margin.</p></div>
+    <div class="part"><span class="tag">Actuator sizing</span><p>Turned the simulated load case and motion profile into torque, inertia, speed and accuracy requirements, then matched them to harmonic-drive servos.</p></div>
+    <div class="part"><span class="tag">Industrial control</span><p>Kinco PLC with pulse/direction motion, 24&nbsp;V safety I/O, magnet relay and an Ethernet HMI, all documented in wiring drawings.</p></div>
+    <div class="part"><span class="tag">Built hardware</span><p>Fabricated, wired and running on the bench, holding stacked test plates on the electromagnet.</p></div>
+  </div>
+  <div class="process" aria-label="Engineering sequence">
+    <div><em>STEP 1</em><b>Simulate</b><span>Check stiffness and strength in Ansys</span></div>
+    <div><em>STEP 2</em><b>Size</b><span>Turn loads into motor requirements</span></div>
+    <div><em>STEP 3</em><b>Control</b><span>PLC, HMI, I/O and wiring</span></div>
+    <div><em>STEP 4</em><b>Build</b><span>Fabricate, assemble, test</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">The hardware</span>
+  <h2>The arm as built</h2>
+  <div class="photos wide">
+    <figure><div class="pw"><img src="img/arm-photo-side.jpg" alt="Side view of the arm with Link-1 raised" loading="lazy"></div><figcaption>Side view. Steel base with the base servo under the turntable, shoulder servo on the side, aluminium Link-1, and the electromagnet on the drop link.</figcaption></figure>
+    <figure><div class="pw"><img src="img/arm-photo-load.jpg" alt="The arm holding stacked steel test plates on its electromagnet" loading="lazy"></div><figcaption>Holding stacked steel test plates on the electromagnet.</figcaption></figure>
+  </div>
+  <div class="fig">
+    <svg viewBox="0 0 640 330" role="img" aria-label="Labelled side view of the arm">
+      <defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="var(--muted)" stroke-width="1.5"/></pattern>
+      <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>
+      <rect x="60" y="292" width="210" height="12" fill="url(#hatch)"/>
+      <rect x="80" y="270" width="170" height="22" rx="3" fill="var(--steel)" opacity=".9"/>
+      <rect x="100" y="205" width="130" height="65" fill="none" stroke="var(--steel)" stroke-width="6"/>
+      <rect x="140" y="215" width="50" height="55" fill="var(--bad)" opacity=".75"/>
+      <rect x="125" y="190" width="80" height="16" fill="var(--steel)"/>
+      <rect x="140" y="140" width="50" height="52" fill="var(--steel)" opacity=".9"/>
+      <circle cx="165" cy="140" r="26" fill="var(--steel)"/><circle cx="165" cy="140" r="9" fill="var(--surface)"/>
+      <rect x="155" y="124" width="320" height="32" rx="16" fill="var(--alu)"/><circle cx="459" cy="140" r="7" fill="var(--surface)"/>
+      <rect x="445" y="140" width="28" height="100" rx="6" fill="var(--alu)" opacity=".85"/>
+      <rect x="440" y="236" width="38" height="12" fill="var(--ink)" opacity=".7"/>
+      <rect x="420" y="250" width="78" height="62" rx="4" fill="var(--steel)" opacity=".55"/>
+      <text x="459" y="286" text-anchor="middle" font-size="13" fill="var(--ink)">5 kg</text>
+      <g font-size="12" fill="var(--ink)">
+        <line x1="40" y1="281" x2="80" y2="281" stroke="var(--muted)"/><text x="6" y="270">BASE</text>
+        <line x1="190" y1="240" x2="285" y2="240" stroke="var(--muted)"/><text x="290" y="244">BASE SERVO M8025 (101:1)</text>
+        <line x1="140" y1="140" x2="70" y2="110" stroke="var(--muted)"/><text x="6" y="104">SHOULDER SERVO M8010</text>
+        <line x1="320" y1="124" x2="320" y2="80" stroke="var(--muted)"/><text x="250" y="72">LINK-1 · aluminium 6061</text>
+        <line x1="473" y1="190" x2="520" y2="190" stroke="var(--muted)"/><text x="525" y="186">LINK-2 +</text><text x="525" y="201">MAGNET</text>
+        <line x1="498" y1="290" x2="530" y2="290" stroke="var(--muted)"/><text x="535" y="294">PAYLOAD</text>
+      </g>
+    </svg>
+    <div class="legend"><span><i style="background:var(--steel)"></i>Mild steel AISI 1010</span><span><i style="background:var(--alu)"></i>Aluminium 6061</span><span><i style="background:var(--bad);opacity:.75"></i>Base servo</span></div>
+    <span class="cap">Schematic side view, not to scale. Two actuated axes: base rotation (waist) and shoulder pitch.</span>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Subsystem</th><th>What it is</th><th>Material / model</th></tr></thead>
+    <tbody>
+      <tr><td>Base</td><td>Fixed housing with base servo</td><td>Mild steel AISI 1010</td></tr>
+      <tr><td>Joint (shoulder)</td><td>Shoulder servo, bearing housing, pin shaft</td><td>Mild steel AISI 1010</td></tr>
+      <tr><td>Link-1</td><td>Two side plates, cross member, end pin</td><td>Aluminium 6061</td></tr>
+      <tr><td>Link-2 + end effector</td><td>Drop link and 24&nbsp;V electromagnet</td><td>Aluminium 6061</td></tr>
+      <tr><td>Base actuator</td><td>Integrated harmonic-drive servo</td><td class="mono">M8025(B)E25B101L</td></tr>
+      <tr><td>Shoulder actuator</td><td>Integrated harmonic-drive servo</td><td class="mono">M8010(B)E17B81L</td></tr>
+      <tr><td>Controller</td><td>Compact PLC, 8 DI / 8 DO</td><td class="mono">Kinco K615S-16DT</td></tr>
+      <tr><td>Operator panel</td><td>7-inch touch HMI, Ethernet</td><td class="mono">Kinco M2070HE</td></tr>
+    </tbody>
+  </table></div>
+  <figure class="shot"><button type="button" data-zoom><img src="img/workspace.jpg" alt="Robot work envelope drawing: plan view diameter 843 mm and side view reach R420 with 180 degree arc" loading="lazy"></button><figcaption>Work envelope of the tool point P: a Ø843&nbsp;mm ring in plan view, 420&nbsp;mm reach and a 180° shoulder arc in side view.</figcaption></figure>
+</section>
+
+<section>
+  <span class="eyebrow">Step 1 · Structural simulation</span>
+  <h2>Checking the structure before building it</h2>
+  <p>The question was simple: with 5&nbsp;kg hanging off a 420&nbsp;mm arm, does any part bend too much or come close to yielding? The model was built and solved in <b>Ansys Mechanical 2023&nbsp;R1</b>, first in two held poses (static) and then through a full moving cycle (transient).</p>
+
+  <h3>Model preparation</h3>
+  <p>Bolts, screws and bearings were removed, small holes and fillets suppressed, and mating parts bonded. These details barely affect overall stiffness but make the mesh slow and messy. The assembly was then merged into five solid bodies.</p>
+  <div class="gallery">
+    <figure class="shot"><button type="button" data-zoom><img src="img/cad-cleanup.jpg" alt="Robotic arm CAD after clean-up" loading="lazy"></button><figcaption>CAD after clean-up: base, base motor, joint motor, Link-1, Link-2, 5&nbsp;kg load.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/five-bodies.jpg" alt="Simulation model split into five bodies" loading="lazy"></button><figcaption>The five simulation bodies, each treated as one continuous solid.</figcaption></figure>
+  </div>
+  <div class="grid2">
+    <div class="part"><span class="tag">Body 1 · <span class="chip st">steel</span></span><h3>Base</h3><p class="muted">Housing with the base motor. Fixed to the table.</p></div>
+    <div class="part"><span class="tag">Body 2 · <span class="chip st">steel</span></span><h3>Joint</h3><p class="muted">Shoulder motor, bearing housing, pin shaft. Rotates about the vertical Y axis.</p></div>
+    <div class="part"><span class="tag">Body 3 · <span class="chip al">aluminium</span></span><h3>Link-1</h3><p class="muted">Two side plates, cross member and end pin.</p></div>
+    <div class="part"><span class="tag">Body 4 · <span class="chip al">aluminium</span></span><h3>Link-2 + magnet</h3><p class="muted">Drop link and electromagnet, merged.</p></div>
+    <div class="part"><span class="tag">Body 5 · <span class="chip st">steel</span></span><h3>5 kg load</h3><p class="muted">Steel cylinder standing in for the part.</p></div>
+  </div>
+
+  <h3>Materials: steel where it stays still, aluminium where it moves</h3>
+  <div class="fig">
+    <div class="bars" id="matbars"></div>
+    <div class="legend"><span><i style="background:var(--steel)"></i>Mild steel AISI 1010</span><span><i style="background:var(--alu)"></i>Aluminium 6061</span></div>
+    <span class="cap">Aluminium 6061 matches the steel's yield strength at about one third of the density, which cuts the gravity torque the shoulder motor must hold. The trade-off is one third of the stiffness, so the links bend the most.</span>
+  </div>
+
+  <h3>Mesh, supports and loads</h3>
+  <div class="gallery">
+    <figure class="shot"><button type="button" data-zoom><img src="img/mesh.jpg" alt="Finite element mesh with 5 mm elements" loading="lazy"></button><figcaption>Uniform 5&nbsp;mm element mesh across all bodies.</figcaption></figure>
+    <div class="fig">
+      <svg viewBox="0 0 600 250" role="img" aria-label="Loads and supports">
+        <rect x="50" y="220" width="160" height="12" fill="url(#hatch)"/>
+        <rect x="70" y="190" width="120" height="30" fill="var(--steel)"/>
+        <rect x="110" y="120" width="40" height="70" fill="var(--steel)" opacity=".85"/>
+        <rect x="115" y="100" width="330" height="26" rx="13" fill="var(--alu)"/>
+        <rect x="420" y="113" width="22" height="70" rx="5" fill="var(--alu)" opacity=".85"/>
+        <rect x="402" y="185" width="58" height="45" rx="3" fill="var(--steel)" opacity=".55"/>
+        <path d="M431 196 v40" stroke="var(--accent)" stroke-width="3" marker-end="url(#ar)"/>
+        <text x="468" y="222" font-size="13" fill="var(--accent)">5 kg × 9.81 ≈ 49 N</text>
+        <path d="M545 40 v60" stroke="var(--accent)" stroke-width="3" marker-end="url(#ar)"/>
+        <text x="510" y="30" font-size="13" fill="var(--accent)">gravity −Y</text>
+        <text x="20" y="246" font-size="13" fill="var(--ink)">BASE: FIXED SUPPORT</text>
+      </svg>
+      <span class="cap">Base fixed in all directions, gravity on every body, and the 5&nbsp;kg payload weight at the magnet.</span>
+    </div>
+  </div>
+  <p>Two held poses were solved. <b>Pose A (pick-up):</b> arm extended over the part. <b>Pose B (holding):</b> base turned 90° with Link-1 raised, part held. Each solve reports deformation, von Mises stress and factor of safety (yield strength ÷ peak stress; Ansys caps the display at 15).</p>
+</section>
+
+<section>
+  <span class="eyebrow">Step 1 · Results</span>
+  <h2>Stiff, lightly stressed, and the joint governs</h2>
+  <p>The largest deflection anywhere is <b>0.085&nbsp;mm</b> at the Link-2 tip, about the width of a hair. Peak stress is under <b>9&nbsp;MPa</b> against yield strengths of 250–259&nbsp;MPa. The joint is the most critical part because it carries the whole cantilever moment of the arm and load.</p>
+  <div class="fig">
+    <h3>Deformation by body (mm)</h3>
+    <div class="bars" id="defbars"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Pose A: pick-up</span><span><i style="background:var(--steel)"></i>Pose B: holding at 90°</span></div>
+  </div>
+  <div class="fig">
+    <h3>Peak stress at pick-up vs yield (MPa)</h3>
+    <div class="bars" id="strbars"></div>
+    <span class="cap">Bars on a 0–260&nbsp;MPa scale; red tick = yield strength of that body's material. The bars are barely visible because the metal is barely working.</span>
+  </div>
+  <div class="fig">
+    <h3>Minimum factor of safety by body</h3>
+    <div class="bars" id="fosbars"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Pose A: pick-up</span><span><i style="background:var(--steel)"></i>Pose B: holding at 90°</span><span><i style="background:var(--bad)"></i>FOS = 1 (yield)</span></div>
+    <span class="cap">Governing case: the <b>joint in Pose B, FOS 4.63</b>. Raising the arm changes how the bending moment passes through the joint housing and pin.</span>
+  </div>
+  <h3>Ansys result plots</h3>
+  <div class="gallery">
+    <figure class="shot"><button type="button" data-zoom><img src="img/deformation-pickup.jpg" alt="Total deformation plots at pick-up" loading="lazy"></button><figcaption>Total deformation, Pose A (pick-up).</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/stress-pickup.jpg" alt="Equivalent stress plots at pick-up" loading="lazy"></button><figcaption>Von Mises stress, Pose A.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/fos-pickup.jpg" alt="Factor of safety plots at pick-up" loading="lazy"></button><figcaption>Factor of safety, Pose A.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/deformation-holding.jpg" alt="Total deformation plots at holding pose" loading="lazy"></button><figcaption>Total deformation, Pose B (holding at 90°).</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/fos-holding.jpg" alt="Factor of safety plots at holding pose" loading="lazy"></button><figcaption>Factor of safety, Pose B. Joint minimum 4.63.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Step 1 · Transient analysis</span>
+  <h2>Moving through a full pick-and-place cycle</h2>
+  <p>The transient study drives the joints through a 120&nbsp;s cycle with smooth ramps, so inertia is included. Press play or drag the slider to see the prescribed motion.</p>
+  <div class="fig">
+    <div class="views">
+      <div class="view"><span class="vt">Side view · Link-1 & Link-2</span>
+        <svg viewBox="0 0 320 200" aria-label="Side view animation">
+          <rect x="30" y="182" width="110" height="10" fill="url(#hatch)"/>
+          <rect x="40" y="160" width="90" height="22" fill="var(--steel)"/>
+          <rect x="70" y="100" width="30" height="60" fill="var(--steel)" opacity=".85"/>
+          <g id="l1"></g>
+          <circle cx="85" cy="100" r="11" fill="var(--steel)"/><circle cx="85" cy="100" r="4" fill="var(--surface)"/>
+        </svg>
+      </div>
+      <div class="view"><span class="vt">Top view · base swing</span>
+        <svg viewBox="0 0 200 200" aria-label="Top view animation">
+          <path d="M60 140 m0 -110 a110 110 0 0 1 110 110" fill="none" stroke="var(--line)" stroke-dasharray="4 4"/>
+          <rect x="155" y="125" width="30" height="30" fill="none" stroke="var(--accent)" stroke-dasharray="3 3"/>
+          <text x="150" y="172" font-size="10" fill="var(--muted)">origin</text>
+          <rect x="45" y="15" width="30" height="30" fill="none" stroke="var(--accent)" stroke-dasharray="3 3"/>
+          <text x="80" y="22" font-size="10" fill="var(--muted)">target</text>
+          <g id="topArm"></g>
+          <rect x="40" y="120" width="40" height="40" fill="var(--steel)" opacity=".85"/>
+        </svg>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="play" id="play" type="button">Play</button>
+      <input id="t" type="range" min="0" max="120" step="0.5" value="0" aria-label="Time in seconds">
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="k">time</div><div class="v" id="rt">0 s</div></div>
+      <div class="ro"><div class="k">base</div><div class="v" id="rj">0°</div></div>
+      <div class="ro"><div class="k">link-1</div><div class="v" id="r1">0°</div></div>
+      <div class="ro"><div class="k">link-2</div><div class="v" id="r2">0°</div></div>
+    </div>
+    <p id="phase"></p>
+    <svg viewBox="0 0 640 150" id="graph" aria-label="Angle vs time for the three prescribed rotations"></svg>
+    <div class="legend"><span><i style="background:var(--steel)"></i>Base (0→90°)</span><span><i style="background:var(--alu)"></i>Link-1 (0→25°)</span><span><i style="background:var(--accent)"></i>Link-2 (end-link orientation)</span></div>
+    <span class="cap">Recreated from the Ansys input profiles. Link-2 has no motor; its profile represents the end link's orientation change as Link-1 pitches.</span>
+  </div>
+  <div class="gallery">
+    <figure class="shot tall"><button type="button" data-zoom><img src="img/motion-profiles.jpg" alt="Ansys rotation vs time input tables and graphs" loading="lazy"></button><figcaption>Ansys input: rotation vs time for the joint, Link-1 and Link-2.</figcaption></figure>
+    <figure class="shot tall"><button type="button" data-zoom><img src="img/transient.jpg" alt="Transient deformation and FOS plots" loading="lazy"></button><figcaption>Transient deformation and FOS of the base, joint, Link-1 and Link-2.</figcaption></figure>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Body</th><th class="num">Max deformation at t = 120 s (mm)</th><th class="num">FOS</th></tr></thead>
+    <tbody>
+      <tr><td>Base</td><td class="num">0.0058</td><td class="num">≥15</td></tr>
+      <tr><td>Joint</td><td class="num">0.0012</td><td class="num">≥15</td></tr>
+      <tr><td>Link-1</td><td class="num">0.071</td><td class="num">≥15</td></tr>
+      <tr><td>Link-2 + magnet</td><td class="num">0.0010</td><td class="num">≥15</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note"><b>Takeaway:</b> at 90° in 30&nbsp;s (0.5&nbsp;rpm) the motion is slow enough that inertia adds little. Motion never beat the static holding pose, so <b>Pose B, joint FOS 4.63</b> is the design case.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Step 2 · Actuator selection</span>
+  <h2>From simulated loads to motor choice</h2>
+  <p>The simulation fixed three requirements: the gravity moment of the governing pose, the speed and acceleration of the cycle, and a tip accuracy in line with the 0.085&nbsp;mm structural deflection. Both axes use <b>integrated harmonic-drive servos</b>, each with motor, drive, absolute encoder and strain-wave reducer in one housing.</p>
+  <h3>Shoulder: M8010, 81:1</h3>
+  <p>The shoulder holds the arm against gravity. Its worst case is Link-1 horizontal at full reach with the part held.</p>
+  <div class="formula">T_req = 1.1 · g · (m₁·L/2 + (m₂ + m_p)·L) + (J_arm + N²·J_rotor) · α</div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Quantity</th><th class="num">Value</th><th>Basis</th></tr></thead>
+    <tbody>
+      <tr><td>Reach L</td><td class="num">0.42 m</td><td>Work envelope drawing</td></tr>
+      <tr><td>Payload m_p</td><td class="num">5 kg</td><td>Requirement</td></tr>
+      <tr><td>Link-1 m₁ / Link-2 + magnet m₂</td><td class="num">2.0 / 1.5 kg</td><td>Estimated; to be replaced with CAD masses</td></tr>
+      <tr><td>Gravity torque</td><td class="num">30.9 N·m</td><td>Horizontal, full reach</td></tr>
+      <tr><td>Arm + reflected rotor inertia</td><td class="num">1.71 kg·m²</td><td>1.26 arm + 0.45 rotor × 81²</td></tr>
+      <tr><td>Accel torque, fast check (25° in 2 s)</td><td class="num">0.75 N·m</td><td>Simulated profile: 0.02 N·m</td></tr>
+      <tr><td><b>Required torque</b> (10% friction allowance)</td><td class="num"><b>34.7 N·m</b></td><td>vs ≈35 N·m rated, 56 N·m peak</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Base: M8025, 101:1</h3>
+  <p>The base turns about a vertical axis, so gravity gives no driving torque and the move needs under 1&nbsp;N·m. The base was sized for what passes <i>through</i> it: the arm's ~31&nbsp;N·m overturning moment on the output bearing, with the governing joint (FOS 4.63) mounted on top. The M8025 is rated at 85&nbsp;N·m continuous and 178&nbsp;N·m peak (80:1 data), and the 101:1 version still reaches about 15&nbsp;rpm, 30× the 0.5&nbsp;rpm the cycle needs.</p>
+  <h3>Why harmonic-drive integrated servos</h3>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Need from the simulation</th><th>What the actuator gives</th></tr></thead>
+    <tbody>
+      <tr><td>Backlash small next to 0.085 mm deflection</td><td>&lt;20 arcsec, which is 0.04 mm at 420 mm reach</td></tr>
+      <tr><td>Repeatable pick point</td><td>15-bit encoder × 101:1 is about 0.8 µm at the tip</td></tr>
+      <tr><td>Hold 5 kg at 90° without drift</td><td>Closed-loop servo, optional brake</td></tr>
+      <tr><td>Know position at power-up</td><td>Multi-turn absolute encoder + zero output</td></tr>
+      <tr><td>Compact wiring</td><td>Drive built in: pulse/dir + CAN on one connector</td></tr>
+      <tr><td>Pulse rate within PLC limits</td><td>~8 kHz needed vs 200 kHz available</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">Tip error budget: 0.085&nbsp;mm deflection + 0.04&nbsp;mm backlash ≈ 0.13&nbsp;mm, well inside what a magnetic gripper tolerates.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Step 3 · Control system</span>
+  <h2>Industrial PLC + HMI control</h2>
+  <p>A <b>Kinco K615S-16DT</b> PLC drives both servos in pulse/direction mode, reads their alarm and zero signals, switches the magnet relay and handles the emergency stop. A <b>Kinco M2070HE</b> 7-inch HMI gives the operator jog, auto-cycle and status screens over Ethernet.</p>
+  <div class="fig">
+    <svg viewBox="0 0 760 500" role="img" aria-label="Control architecture: PLC connected to HMI, two servos, magnet relay, e-stop, reset, buzzer and 24 V power">
+      <defs><marker id="ca" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>
+      <g fill="none" stroke="var(--muted)" stroke-width="1.4">
+        <path d="M336 76V116" marker-start="url(#ca)" marker-end="url(#ca)"/>
+        <path d="M436 152H536" marker-start="url(#ca)" marker-end="url(#ca)"/>
+        <path d="M436 248H536" marker-start="url(#ca)" marker-end="url(#ca)"/>
+        <path d="M400 292V336H536" marker-end="url(#ca)"/>
+        <path d="M176 140H236" marker-end="url(#ca)"/>
+        <path d="M176 204H236" marker-end="url(#ca)"/>
+        <path d="M236 268H176" marker-end="url(#ca)"/>
+        <path d="M300 412V292" marker-end="url(#ca)"/>
+      </g>
+      <text x="346" y="100" font-size="12" fill="var(--muted)">Ethernet · Modbus TCP</text>
+      <text x="310" y="378" font-size="12" fill="var(--muted)">24 VDC</text>
+      <g fill="none" stroke="var(--line)" stroke-width="1.5">
+        <rect x="236" y="20" width="200" height="56" rx="8"/>
+        <rect x="536" y="116" width="200" height="72" rx="8"/><rect x="536" y="204" width="200" height="88" rx="8"/><rect x="536" y="308" width="200" height="56" rx="8"/>
+        <rect x="24" y="116" width="152" height="48" rx="8"/><rect x="24" y="180" width="152" height="48" rx="8"/><rect x="24" y="244" width="152" height="48" rx="8"/>
+      </g>
+      <rect x="236" y="116" width="200" height="176" rx="8" fill="var(--accent)" fill-opacity=".1" stroke="var(--accent)" stroke-width="2"/>
+      <rect x="24" y="412" width="712" height="56" rx="8" fill="var(--soft)" stroke="var(--line)"/>
+      <g font-size="13" fill="var(--ink)">
+        <text x="336" y="44" text-anchor="middle" font-weight="600">HMI · Kinco M2070HE</text>
+        <text x="336" y="64" text-anchor="middle" font-size="11.5" fill="var(--muted)">7-in touch: jog, auto, status</text>
+        <text x="336" y="140" text-anchor="middle" font-weight="600">PLC · K615S-16DT</text>
+        <text x="252" y="170" font-size="11.5">3 × 200 kHz pulse outputs</text>
+        <text x="252" y="188" font-size="11.5">8 DI / 8 DO, 24 VDC PNP</text>
+        <text x="252" y="206" font-size="11.5">CANopen master (spare)</text>
+        <text x="252" y="224" font-size="11.5">Ethernet, 2 × RS485</text>
+        <text x="252" y="256" font-size="11.5" fill="var(--muted)">Ladder logic · KincoBuilder</text>
+        <text x="552" y="140" font-weight="600">Base servo M8025</text>
+        <text x="552" y="158" font-size="11.5" fill="var(--muted)">101:1 harmonic drive</text>
+        <text x="552" y="176" font-size="11.5">Q0.0 PU · Q0.2 DIR · I0.2 WR</text>
+        <text x="552" y="228" font-weight="600">Shoulder servo M8010</text>
+        <text x="552" y="246" font-size="11.5" fill="var(--muted)">81:1 harmonic drive</text>
+        <text x="552" y="264" font-size="11.5">Q0.1 PU · Q0.3 DIR</text>
+        <text x="552" y="280" font-size="11.5">I0.3 WR · I0.4 ZO</text>
+        <text x="552" y="332" font-weight="600">Magnet relay · Q0.7</text>
+        <text x="552" y="350" font-size="11.5" fill="var(--muted)">switches 24 V electromagnet</text>
+        <text x="40" y="138" font-weight="600">E-stop</text><text x="40" y="155" font-size="11.5" fill="var(--muted)">input I0.0</text>
+        <text x="40" y="202" font-weight="600">Reset</text><text x="40" y="219" font-size="11.5" fill="var(--muted)">input I0.1</text>
+        <text x="40" y="266" font-weight="600">Buzzer</text><text x="40" y="283" font-size="11.5" fill="var(--muted)">output Q0.5</text>
+        <text x="380" y="436" text-anchor="middle" font-weight="600">230 V AC → key switch → SMPS → fused 24 VDC</text>
+        <text x="380" y="455" text-anchor="middle" font-size="11.5" fill="var(--muted)">feeds the PLC, HMI, both servos and the electromagnet</text>
+      </g>
+    </svg>
+    <span class="cap">Control and power architecture with PLC addresses, taken from the project's electrical drawings.</span>
+  </div>
+  <div class="grid2">
+    <div class="part"><span class="tag">Why a PLC</span><ul class="clean">
+      <li>24&nbsp;V isolated I/O wired straight to e-stop, buzzer and relay</li>
+      <li>Built-in 200&nbsp;kHz pulse outputs with motion instructions</li>
+      <li>CANopen master for a future move to bus control (servo EDS file in repo)</li>
+      <li>IEC 61131-3 ladder logic, the industry norm</li>
+    </ul></div>
+    <div class="part"><span class="tag">Why this HMI</span><ul class="clean">
+      <li>7-inch 1024×600 touch panel, IP65 front</li>
+      <li>Runs on the same 24&nbsp;V rail (4.2&nbsp;W)</li>
+      <li>Ethernet for PLC link and program download</li>
+      <li>Same Kinco ecosystem as the PLC</li>
+    </ul></div>
+  </div>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Address</th><th>Signal</th><th>Connected to</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">Q0.0 / Q0.2</td><td>Base pulse / direction</td><td>Base servo</td></tr>
+      <tr><td class="mono">Q0.1 / Q0.3</td><td>Shoulder pulse / direction</td><td>Shoulder servo</td></tr>
+      <tr><td class="mono">Q0.4</td><td>Reset output</td><td>Servo alarm reset</td></tr>
+      <tr><td class="mono">Q0.5</td><td>Emergency buzzer</td><td>Buzzer</td></tr>
+      <tr><td class="mono">Q0.7</td><td>Electromagnet relay</td><td>Relay coil, 24&nbsp;V magnet</td></tr>
+      <tr><td class="mono">I0.0 / I0.1</td><td>Emergency stop / reset</td><td>Push buttons</td></tr>
+      <tr><td class="mono">I0.2 / I0.3</td><td>Base / shoulder alarm (WR)</td><td>Servo alarm outputs</td></tr>
+      <tr><td class="mono">I0.4</td><td>Shoulder zero (ZO)</td><td>Servo zero output</td></tr>
+    </tbody>
+  </table></div>
+  <div class="gallery">
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc-outputs.jpg" alt="Electrical drawing: PLC output connections" loading="lazy"></button><figcaption>Electrical drawing: PLC outputs.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc-inputs.jpg" alt="Electrical drawing: PLC input connections" loading="lazy"></button><figcaption>Electrical drawing: PLC inputs.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Engineering judgement</span>
+  <h2>Next validation steps</h2>
+  <p>The design passes with margin. These are the checks that would take it from "simulated and working" to "validated":</p>
+  <div class="flags">
+    <div class="flag"><b>Local joint refinement</b><span>Re-mesh the joint pin bore finer and confirm the 4.63 FOS with a convergence check.</span></div>
+    <div class="flag"><b>Bolts and bearings</b><span>They were removed for the global model. A separate hand check of the joint fasteners and bearing would back the "joint is safe" result.</span></div>
+    <div class="flag"><b>Full time history</b><span>Pull peak transient values from mid-swing, not only at the end of the cycle.</span></div>
+    <div class="flag"><b>CAD masses for sizing</b><span>Replace estimated link masses and read the joint reaction torque straight from Ansys. The shoulder torque has about 1.6× margin on peak.</span></div>
+    <div class="flag"><b>Supply voltage</b><span>Servos are catalogued at 36&nbsp;VDC and fed 24&nbsp;V. Fine for this slow cycle, but worth confirming on the nameplate.</span></div>
+    <div class="flag"><b>Measure it</b><span>Dial-gauge the tip under 5&nbsp;kg and compare with the 0.085&nbsp;mm prediction.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">People & skills</span>
+  <h2>Team</h2>
+  <div class="team">
+    <div class="person"><b>Mithunvel K L</b><span>23BMH1029 · B.Tech. Mechatronics & Automation, VIT Chennai</span></div>
+    <div class="person"><b>Vaishnav V G</b><span>24BMH1035 · B.Tech. Mechatronics & Automation, VIT Chennai</span></div>
+    <div class="person"><b>Nadraj</b><span>VIT Chennai</span></div>
+  </div>
+  <div class="skills">
+    <span>Finite element analysis</span><span>Ansys Mechanical (static + transient)</span><span>Material selection</span><span>Actuator sizing</span><span>Harmonic-drive servos</span><span>PLC programming (ladder)</span><span>HMI design</span><span>Pulse/direction motion control</span><span>Electrical panel drawings</span><span>CANopen</span><span>Technical writing</span>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Documentation</span>
+  <h2>Read more</h2>
+  <ul class="clean">
+    <li><a href="https://github.com/KL-Mithunvel/PLC-2-DOF-manipulator" target="_blank" rel="noopener">GitHub repository</a>: hardware list, wiring details, electrical drawings, work envelope, servo EDS file and PLC/HMI program backup.</li>
+    <li><a href="https://github.com/KL-Mithunvel/PLC-2-DOF-manipulator/tree/main/docs/paper" target="_blank" rel="noopener">Technical paper</a>: <i>Simulation-Driven Design of a PLC-Controlled 2-DOF Robotic Manipulator</i> (PDF and Word).</li>
+    <li>Source simulation study: <i>2DOF Robotic Arm – Simulation Technical Report</i>, 15 Feb 2026, Ansys Mechanical 2023 R1.</li>
+  </ul>
+</section>
+
+<footer>PLC 2-DOF Robotic Arm · Mithunvel K L · Vaishnav V G · Nadraj · VIT Chennai, 2026</footer>
+</div>
+
+<dialog id="lb" aria-label="Enlarged figure"><form method="dialog"><button class="x" type="submit" aria-label="Close">Close ✕</button></form><img id="lbimg" alt=""><p id="lbcap"></p></dialog>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const S='var(--steel)',A='var(--alu)',O='var(--accent)';
+  const row=(lab,w,c,val,extra='')=>`<div class="bar"><span class="lab">${lab}</span><span class="track">${extra}<span class="fill" style="width:${Math.max(w,0.4)}%;background:${c}"></span></span><span class="val">${val}</span></div>`;
+  const grp=(name,inner)=>`<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:.85rem;font-weight:600">${name}</span>${inner}</div>`;
+
+  const mat=[['Density',7872,2713,'kg/m³'],['Yield strength',250,259.2,'MPa'],['Ultimate strength',460,313.1,'MPa'],["Young's modulus",200,68.9,'GPa']];
+  $('matbars').innerHTML=mat.map(m=>{const mx=Math.max(m[1],m[2]);return grp(m[0],row('Steel',m[1]/mx*100,S,`${m[1]} ${m[3]}`)+row('Alu',m[2]/mx*100,A,`${m[2]} ${m[3]}`))}).join('');
+
+  const def=[['Base',0.0015562,0.00048213],['Joint',0.0071232,0.0036526],['Link-1',0.083389,0.065192],['Link-2',0.085189,0.068636]];
+  $('defbars').innerHTML=def.map(d=>grp(d[0],row('Pick-up',d[1]/0.09*100,O,d[1].toPrecision(3))+row('At 90°',d[2]/0.09*100,S,d[2].toPrecision(3)))).join('');
+
+  const st=[['Base',5.1493,250,S],['Joint',8.8051,250,S],['Link-1',4.438,259.2,A],['Link-2',1.1322,259.2,A]];
+  $('strbars').innerHTML=st.map(s=>row(s[0],s[1]/260*100,s[3],`${s[1].toFixed(2)} / ${s[2]}`,`<span class="mark" style="left:${s[2]/260*100-0.5}%"></span>`)).join('');
+
+  const fos=[['Base',15,15],['Joint',9.7898,4.631],['Link-1',15,9.0155],['Link-2',15,15]];
+  const mk=`<span class="mark" style="left:${100/15}%"></span>`;
+  $('fosbars').innerHTML=fos.map(f=>grp(f[0],row('Pick-up',f[1]/15*100,O,f[1]==15?'≥15':f[1].toFixed(2),mk)+row('At 90°',f[2]/15*100,S,f[2]==15?'≥15':f[2].toFixed(2),mk))).join('');
+
+  // lightbox
+  const lb=$('lb');
+  document.querySelectorAll('[data-zoom]').forEach(b=>b.addEventListener('click',()=>{
+    const im=b.querySelector('img');$('lbimg').src=im.src;$('lbimg').alt=im.alt;
+    const fc=b.closest('figure').querySelector('figcaption');$('lbcap').textContent=fc?fc.textContent:'';
+    try{lb.showModal()}catch(e){}
+  }));
+  lb.addEventListener('click',e=>{if(e.target===lb)lb.close()});
+
+  // motion
+  const lerp=(a,b,u)=>a+(b-a)*Math.min(1,Math.max(0,u));
+  const joint=t=>t<30?lerp(0,90,t/30):t<60?90:t<90?lerp(90,0,(t-60)/30):0;
+  function tri(t,pk){const seg=(s,e)=>{const m=(s+e)/2;return t<m?lerp(0,pk,(t-s)/(m-s)):lerp(pk,0,(t-m)/(e-m))};
+    if(t>=30&&t<=58)return seg(30,58);if(t>=92&&t<=120)return seg(92,120);return 0}
+  const l1=t=>tri(t,25), l2=t=>tri(t,10);
+  const G=$('graph'),gx=v=>40+v/120*590,gy=v=>130-v/90*115;
+  let g='<g font-size="10" fill="var(--muted)">';
+  [0,30,60,90,120].forEach(v=>{g+=`<line x1="${gx(v)}" y1="15" x2="${gx(v)}" y2="130" stroke="var(--line)"/><text x="${gx(v)}" y="144" text-anchor="middle">${v}s</text>`});
+  [0,25,45,90].forEach(v=>{g+=`<text x="34" y="${gy(v)+3}" text-anchor="end">${v}°</text>`});
+  g+='</g>';
+  const line=(f,c)=>{let d='';for(let t=0;t<=120;t+=0.5)d+=(t?'L':'M')+gx(t).toFixed(1)+' '+gy(f(t)).toFixed(1);return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2"/>`};
+  g+=line(joint,S)+line(l1,A)+line(l2,O)+'<line id="cur" x1="40" y1="12" x2="40" y2="130" stroke="var(--ink)" stroke-width="1.2"/>';
+  G.innerHTML=g;
+  const phases=[[30,'Swinging 90° from the origin to the target, carrying the part.'],[60,'At the target: arms tilt up and back down to place the part.'],[90,'Swinging back 90° to the origin.'],[121,'At the origin: arms tilt up and down again to pick the next part.']];
+  function draw(t){
+    const a1=l1(t)*Math.PI/180,a2=l2(t)*Math.PI/180,px=85,py=100,L1=165,L2=55;
+    const ex=px+L1*Math.cos(a1),ey=py-L1*Math.sin(a1),dir=Math.PI/2-a1+a2,fx=ex+L2*Math.cos(dir),fy=ey+L2*Math.sin(dir);
+    $('l1').innerHTML=`<line x1="${px}" y1="${py}" x2="${ex}" y2="${ey}" stroke="var(--alu)" stroke-width="14" stroke-linecap="round"/><line x1="${ex}" y1="${ey}" x2="${fx}" y2="${fy}" stroke="var(--alu)" stroke-width="10" stroke-linecap="round" opacity=".85"/><circle cx="${ex}" cy="${ey}" r="4" fill="var(--surface)"/><rect x="${fx-15}" y="${fy+4}" width="30" height="24" rx="3" fill="var(--steel)" opacity=".6"/>`;
+    const j=joint(t)*Math.PI/180,cx=60,cy=140,R=110,tx=cx+R*Math.cos(-j),ty=cy+R*Math.sin(-j);
+    $('topArm').innerHTML=`<line x1="${cx}" y1="${cy}" x2="${tx}" y2="${ty}" stroke="var(--alu)" stroke-width="12" stroke-linecap="round"/><rect x="${tx-11}" y="${ty-11}" width="22" height="22" fill="var(--steel)" opacity=".7"/>`;
+    $('cur').setAttribute('x1',gx(t));$('cur').setAttribute('x2',gx(t));
+    $('rt').textContent=t.toFixed(0)+' s';$('rj').textContent=joint(t).toFixed(0)+'°';$('r1').textContent=l1(t).toFixed(1)+'°';$('r2').textContent=l2(t).toFixed(1)+'°';
+    $('phase').innerHTML='<b>Now:</b> '+phases.find(p=>t<p[0])[1];
+  }
+  const sl=$('t');let raf=null,last=0;
+  sl.addEventListener('input',()=>draw(+sl.value));
+  function step(ts){if(!last)last=ts;let t=+sl.value+(ts-last)/1000*12;last=ts;if(t>120)t=0;sl.value=t;draw(t);raf=requestAnimationFrame(step)}
+  $('play').addEventListener('click',()=>{if(raf){cancelAnimationFrame(raf);raf=null;$('play').textContent='Play'}else{last=0;raf=requestAnimationFrame(step);$('play').textContent='Pause'}});
+  draw(0);
+})();
+</script>
+
+</body>
+</html>
