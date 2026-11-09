@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2DOF Arm Report Explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single reading column (~720px) of numbered report chapters, each pairing plain-language text with a drawn figure; one interactive motion player in the transient chapter. */
+:root{
+  --bg:#F2F4F6; --surface:#FFFFFF; --ink:#17212C; --muted:#5B6876; --line:#D4DBE2; --soft:#E7ECF1;
+  --steel:#3F6185; --alu:#24877A; --accent:#D2601A; --bad:#BE3A2A; --good:#2E8B4E;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11171D; --surface:#19212A; --ink:#E3E9EF; --muted:#9AA7B4; --line:#2E3A46; --soft:#222C36;
+  --steel:#7FA3C9; --alu:#4FC0AE; --accent:#F08A46; --bad:#EE6A57; --good:#5CC17E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11171D; --surface:#19212A; --ink:#E3E9EF; --muted:#9AA7B4; --line:#2E3A46; --soft:#222C36;
+  --steel:#7FA3C9; --alu:#4FC0AE; --accent:#F08A46; --bad:#EE6A57; --good:#5CC17E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:740px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(2.4rem,8vw,3.6rem);font-weight:700}
+h2{font-size:clamp(1.8rem,5.5vw,2.3rem);font-weight:600}
+h3{font-size:1.35rem;font-weight:600}
+p{margin:0}
+section{display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:1.1rem;color:var(--muted);max-width:62ch}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.fig svg{width:100%;height:auto;display:block}
+.cap{font-size:.84rem;color:var(--muted)}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 14px;color:var(--ink)}
+.note b{color:var(--accent)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.part{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.part .tag{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.chip{display:inline-block;font-family:var(--mono);font-size:.7rem;padding:1px 7px;border-radius:99px;color:#fff;vertical-align:middle}
+.chip.st{background:var(--steel)} .chip.al{background:var(--alu)}
+ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.tblwrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:420px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+th.num{text-align:right}
+/* bar charts */
+.bars{display:flex;flex-direction:column;gap:10px}
+.bar{display:grid;grid-template-columns:64px 1fr 92px;align-items:center;gap:10px;font-size:.88rem}
+.bar .lab{color:var(--muted)}
+.bar .track{height:14px;background:var(--soft);border-radius:2px;position:relative}
+.bar .fill{height:100%;border-radius:2px;min-width:2px}
+.bar .val{font-family:var(--mono);font-size:.8rem;text-align:right;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--bad)}
+/* player */
+.player{display:flex;flex-direction:column;gap:12px}
+.views{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media (max-width:540px){.views{grid-template-columns:1fr}}
+.view{border:1px solid var(--line);border-radius:4px;padding:8px;min-width:0}
+.view .vt{font-family:var(--mono);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+button{font-family:var(--mono);font-size:.85rem;background:var(--ink);color:var(--bg);border:0;border-radius:4px;padding:8px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
+.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:480px){.readout{grid-template-columns:repeat(2,1fr)}}
+.ro{background:var(--soft);border-radius:4px;padding:8px 10px}
+.ro .k{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ro .v{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.phase{font-size:.95rem}
+.steps{display:flex;flex-direction:column;gap:10px;counter-reset:s;margin:0;padding:0;list-style:none}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:10px}
+.steps li::before{counter-increment:s;content:counter(s);font-family:var(--mono);font-size:.8rem;width:24px;height:24px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
+dl{margin:0;display:grid;grid-template-columns:minmax(120px,190px) 1fr;gap:10px 16px}
+dt{font-weight:600}
+dd{margin:0;color:var(--muted)}
+@media (max-width:480px){dl{grid-template-columns:1fr;gap:2px 0} dd{margin-bottom:10px}}
+.flag{display:flex;flex-direction:column;gap:4px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.flag b{font-family:var(--display);font-size:1.15rem;font-weight:600}
+svg text{font-family:var(--mono)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:14px">
+  <span class="eyebrow">Arcedus · Simulation Technical Report · 15 Feb 2026 · 9 pages</span>
+  <h1>The 2-DOF robotic arm report, explained simply</h1>
+  <p class="lede">The company designed a small robot arm that picks up a 5&nbsp;kg block with a magnet and swings it 90° to another spot. Before building it, they tested it inside a computer (Ansys 2023&nbsp;R1) to answer one question: <b style="color:var(--ink)">will any part bend too much or break?</b> Short answer from the report: no, it's safe.</p>
+  <div class="fig">
+    <svg viewBox="0 0 640 330" role="img" aria-label="Labelled side view of the arm">
+      <defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="var(--muted)" stroke-width="1.5"/></pattern></defs>
+      <rect x="60" y="292" width="210" height="12" fill="url(#hatch)"/>
+      <!-- base -->
+      <rect x="80" y="270" width="170" height="22" rx="3" fill="var(--steel)" opacity=".9"/>
+      <rect x="100" y="205" width="130" height="65" fill="none" stroke="var(--steel)" stroke-width="6"/>
+      <rect x="140" y="215" width="50" height="55" fill="var(--bad)" opacity=".75"/>
+      <!-- turntable + joint -->
+      <rect x="125" y="190" width="80" height="16" fill="var(--steel)"/>
+      <rect x="140" y="140" width="50" height="52" fill="var(--steel)" opacity=".9"/>
+      <circle cx="165" cy="140" r="26" fill="var(--steel)"/>
+      <circle cx="165" cy="140" r="9" fill="var(--surface)"/>
+      <!-- link1 -->
+      <rect x="155" y="124" width="320" height="32" rx="16" fill="var(--alu)"/>
+      <circle cx="459" cy="140" r="7" fill="var(--surface)"/>
+      <!-- link2 -->
+      <rect x="445" y="140" width="28" height="100" rx="6" fill="var(--alu)" opacity=".85"/>
+      <rect x="440" y="236" width="38" height="12" fill="var(--ink)" opacity=".7"/>
+      <!-- load -->
+      <rect x="420" y="250" width="78" height="62" rx="4" fill="var(--steel)" opacity=".55"/>
+      <text x="459" y="286" text-anchor="middle" font-size="13" fill="var(--ink)">5 kg</text>
+      <!-- labels -->
+      <g font-size="12" fill="var(--ink)">
+        <line x1="40" y1="281" x2="80" y2="281" stroke="var(--muted)"/><text x="6" y="270">BASE</text>
+        <line x1="190" y1="240" x2="285" y2="240" stroke="var(--muted)"/><text x="290" y="244">BASE MOTOR (spins arm left/right)</text>
+        <line x1="140" y1="140" x2="70" y2="110" stroke="var(--muted)"/><text x="10" y="104">JOINT + MOTOR</text>
+        <line x1="320" y1="124" x2="320" y2="80" stroke="var(--muted)"/><text x="276" y="72">LINK-1 (upper arm)</text>
+        <line x1="473" y1="190" x2="520" y2="190" stroke="var(--muted)"/><text x="525" y="186">LINK-2 +</text><text x="525" y="201">MAGNET</text>
+        <line x1="498" y1="290" x2="530" y2="290" stroke="var(--muted)"/><text x="535" y="294">PAYLOAD</text>
+      </g>
+    </svg>
+    <div class="legend"><span><i style="background:var(--steel)"></i>Mild steel parts</span><span><i style="background:var(--alu)"></i>Aluminium parts</span><span><i style="background:var(--bad);opacity:.75"></i>Motor</span></div>
+    <span class="cap">Simplified redraw of the report's Figure 1. Not to scale.</span>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">The big idea</span>
+  <h2>What the report actually does</h2>
+  <ol class="steps">
+    <li><span><b>Clean up the CAD model.</b> Remove tiny details the computer doesn't need.</span></li>
+    <li><span><b>Assign materials.</b> Tell the software which parts are steel and which are aluminium.</span></li>
+    <li><span><b>Mesh it.</b> Chop every part into thousands of tiny pieces (5&nbsp;mm each) so the math can be done.</span></li>
+    <li><span><b>Static test.</b> Freeze the arm in two poses and apply gravity + the 5&nbsp;kg load. Measure bending and stress.</span></li>
+    <li><span><b>Transient (moving) test.</b> Actually move the arm through a full pick-and-place cycle and measure again.</span></li>
+    <li><span><b>Conclude.</b> Find the weakest spot and check it still has a good safety margin.</span></li>
+  </ol>
+</section>
+
+<section>
+  <span class="eyebrow">Pages 1–2 · Model description</span>
+  <h2>The 5 bodies</h2>
+  <p>A real arm has dozens of pieces: bolts, bearings, screws, brackets. Simulating each is slow, so they <b>glued groups of parts together into 5 solid "bodies"</b>. Each body is treated as one chunk of metal.</p>
+  <div class="grid2">
+    <div class="part"><span class="tag">Body 1 · <span class="chip st">steel</span></span><h3>Base</h3><p class="muted">The box at the bottom, including the motor housing. It's bolted to the table, so it never moves.</p></div>
+    <div class="part"><span class="tag">Body 2 · <span class="chip st">steel</span></span><h3>Joint</h3><p class="muted">Joint motor + bearing housing + pin shaft. It spins around the vertical <span class="mono">Y</span>-axis, which swings the whole arm left/right.</p></div>
+    <div class="part"><span class="tag">Body 3 · <span class="chip al">aluminium</span></span><h3>Link-1</h3><p class="muted">The long horizontal arm: two side plates (Arm-1, Arm-2), a cross member joining them, and the pin shaft at the far end.</p></div>
+    <div class="part"><span class="tag">Body 4 · <span class="chip al">aluminium</span></span><h3>Link-2 + magnet</h3><p class="muted">The short downward arm and the electromagnet that grabs the load. Merged into one body.</p></div>
+    <div class="part"><span class="tag">Body 5 · <span class="chip st">steel</span></span><h3>5 kg load</h3><p class="muted">A steel cylinder standing in for whatever object the arm lifts. Its own weight is the load.</p></div>
+  </div>
+  <div class="note"><b>Why simplify?</b> Bolts, screws and bearings were deleted and small features (holes, fillets) suppressed. They barely change how the arm bends overall, but they make the mesh messy and the solve slow. "Idealized contacts" means they told the software that touching parts are simply stuck together.</div>
+</section>
+
+<section>
+  <span class="eyebrow">Pages 2–3 · Materials</span>
+  <h2>Steel vs aluminium</h2>
+  <p>The heavy, stationary parts use <b>mild steel (AISI 1010)</b>. The moving arms use <b>aluminium 6061</b>, which is almost as strong but about one third the weight. Lighter arms mean smaller motors.</p>
+  <div class="fig">
+    <h3>Side-by-side, to scale</h3>
+    <div class="bars" id="matbars"></div>
+    <div class="legend"><span><i style="background:var(--steel)"></i>Mild steel AISI 1010</span><span><i style="background:var(--alu)"></i>Aluminium 6061</span></div>
+  </div>
+  <dl>
+    <dt>Density</dt><dd>How heavy per volume. Steel 7872 vs aluminium 2713&nbsp;kg/m³, so aluminium is ~2.9× lighter.</dd>
+    <dt>Yield strength</dt><dd>The stress at which the metal starts to <b>permanently</b> bend. Below it, the part springs back. This is the number the safety factor is based on. Steel 250, aluminium 259.2&nbsp;MPa: nearly equal.</dd>
+    <dt>Ultimate strength</dt><dd>The stress at which it actually breaks. Steel 460, aluminium 313.1&nbsp;MPa.</dd>
+    <dt>Young's modulus</dt><dd>Stiffness: how hard it is to stretch or bend. Steel 200&nbsp;GPa is ~3× stiffer than aluminium 68.9&nbsp;GPa. That's why the aluminium links bend the most.</dd>
+    <dt>Bulk modulus</dt><dd>Resistance to being squeezed from all sides. Steel 166.6, aluminium 58&nbsp;GPa. Rarely matters for an arm.</dd>
+    <dt>Poisson's ratio</dt><dd>When you stretch a bar it gets slightly thinner. This number (0.3 and 0.33) says how much.</dd>
+  </dl>
+  <p class="muted" style="font-size:.9rem">Units: 1&nbsp;MPa = 1&nbsp;N per mm². So 250&nbsp;MPa means each square millimetre can carry about 25&nbsp;kg before yielding.</p>
+</section>
+
+<section>
+  <span class="eyebrow">Page 3 · Meshing</span>
+  <h2>Chopping it into tiny pieces</h2>
+  <p>Computers can't solve one big complicated shape directly. So the software splits each body into many small tetrahedra and cubes ("elements"), about <b>5&nbsp;mm</b> wide here. It solves simple equations for each little piece and joins the answers. This method is called <b>Finite Element Analysis (FEA)</b>.</p>
+  <div class="fig">
+    <svg viewBox="0 0 600 170" role="img" aria-label="A smooth bar turning into a triangle mesh">
+      <rect x="20" y="50" width="200" height="60" rx="30" fill="var(--alu)" opacity=".85"/>
+      <text x="120" y="140" text-anchor="middle" font-size="12" fill="var(--muted)">real part (smooth)</text>
+      <path d="M245 80 h70" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#ar)"/>
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>
+      <g id="meshg"></g>
+      <text x="460" y="140" text-anchor="middle" font-size="12" fill="var(--muted)">meshed (5 mm elements)</text>
+    </svg>
+    <span class="cap">Smaller elements = more accurate but slower. 5 mm is a typical compromise for a part this size.</span>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Pages 3–6 · Static structural</span>
+  <h2>Test 1: freeze the arm and load it</h2>
+  <p>"Static" means nothing is moving. The arm is held still in a pose, and the software asks: with gravity pulling down, how much does each part sag, and how hard is the metal working?</p>
+  <div class="fig">
+    <svg viewBox="0 0 600 250" role="img" aria-label="Loads and supports">
+      <rect x="50" y="220" width="160" height="12" fill="url(#hatch)"/>
+      <rect x="70" y="190" width="120" height="30" fill="var(--steel)"/>
+      <rect x="110" y="120" width="40" height="70" fill="var(--steel)" opacity=".85"/>
+      <rect x="115" y="100" width="330" height="26" rx="13" fill="var(--alu)"/>
+      <rect x="420" y="113" width="22" height="70" rx="5" fill="var(--alu)" opacity=".85"/>
+      <rect x="402" y="185" width="58" height="45" rx="3" fill="var(--steel)" opacity=".55"/>
+      <path d="M431 196 v40" stroke="var(--accent)" stroke-width="3" marker-end="url(#ar)"/>
+      <text x="470" y="222" font-size="12" fill="var(--accent)">5 kg × 9.81 ≈ 49 N</text>
+      <path d="M545 40 v60" stroke="var(--accent)" stroke-width="3" marker-end="url(#ar)"/>
+      <text x="520" y="30" font-size="12" fill="var(--accent)">gravity −Y</text>
+      <text x="20" y="246" font-size="12" fill="var(--ink)">BASE: FIXED (can't move at all)</text>
+      <text x="200" y="88" font-size="11" fill="var(--muted)">every part's own weight also pulls down</text>
+    </svg>
+  </div>
+  <p>Three things are set up:</p>
+  <ul class="clean">
+    <li><b>Base fixed:</b> bolted down, zero movement.</li>
+    <li><b>Earth gravity in −Y:</b> every part feels its own weight.</li>
+    <li><b>Load:</b> the 5&nbsp;kg block's own weight hangs on the magnet.</li>
+  </ul>
+  <p>They tested <b>two poses</b>:</p>
+  <div class="grid2">
+    <div class="part"><span class="tag">Pose A · Figs 4–6</span><h3>Pick-up position</h3><p class="muted">Arm straight out, just grabbed the block.</p></div>
+    <div class="part"><span class="tag">Pose B · Figs 7–8</span><h3>Holding, rotated 90°</h3><p class="muted">Arm swung 90° about the base and the upper arm tilted up, still holding the block. Ansys label: "Up – Rotate 90_Deg".</p></div>
+  </div>
+
+  <h3 style="margin-top:12px">Three results they measured</h3>
+  <dl>
+    <dt>Total deformation</dt><dd>How far each point moves from where it started, in mm. Colours in the Ansys plots: blue = barely moved, red = moved most.</dd>
+    <dt>Equivalent (von Mises) stress</dt><dd>One number that combines all the pushing, pulling and twisting inside the metal, so you can compare it straight against the yield strength.</dd>
+    <dt>Factor of Safety (FOS)</dt><dd><span class="mono">FOS = yield strength ÷ actual stress</span>. FOS 2 means the part could carry twice the stress before permanently bending. Ansys caps the display at <b>15</b>, so "15" really means "15 or more, very safe".</dd>
+  </dl>
+
+  <div class="fig">
+    <h3>Deformation: how far each body moves (mm)</h3>
+    <div class="bars" id="defbars"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Pose A: pick-up</span><span><i style="background:var(--steel)"></i>Pose B: holding at 90°</span></div>
+    <span class="cap">Biggest value: Link-2 at 0.085 mm. A human hair is about 0.07 mm thick, so the tip sags roughly one hair's width. The base moves 0.0016 mm, invisible.</span>
+  </div>
+
+  <div class="fig">
+    <h3>Stress at pick-up (MPa), against yield</h3>
+    <div class="bars" id="strbars"></div>
+    <span class="cap">The bars are drawn on a 0–260 MPa scale (the yield line is the right edge). All stresses are tiny, under 9 MPa, so the bars barely show. That's the point: the metal is barely working. The report does not show stress plots for Pose B, only FOS.</span>
+  </div>
+
+  <div class="fig">
+    <h3>Minimum Factor of Safety per body</h3>
+    <div class="bars" id="fosbars"></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>Pose A: pick-up</span><span><i style="background:var(--steel)"></i>Pose B: holding at 90°</span><span><i style="background:var(--bad)"></i>FOS = 1 (yield)</span></div>
+    <span class="cap">The <b>joint at Pose B</b> has the lowest FOS: <b>4.631</b>. This is the weakest spot in the whole report and becomes the headline number in the conclusion ("4.6").</span>
+  </div>
+
+  <div class="note"><b>Why the joint?</b> The joint holds up the whole arm plus the load, like your shoulder holding a bag at arm's length. The long lever creates a large twisting moment right at the joint. Tilting the arm up in Pose B changes how that load passes through the joint, which raises its stress.</div>
+</section>
+
+<section>
+  <span class="eyebrow">Pages 6–9 · Transient structural</span>
+  <h2>Test 2: move the arm through a full cycle</h2>
+  <p>"Transient" means things change with time. Instead of frozen poses, they made the motors actually turn and watched stress and bending over a <b>120-second</b> pick-and-place cycle. Speeding up or slowing down adds extra forces (inertia), and this test catches those.</p>
+  <p>Each motor was given an angle-vs-time recipe (the graphs on page 7). Press play or drag the slider to see what those recipes do.</p>
+
+  <div class="fig player">
+    <div class="views">
+      <div class="view"><span class="vt">Side view · link-1 & link-2 tilt</span>
+        <svg viewBox="0 0 320 200" id="side" aria-label="Side view animation">
+          <rect x="30" y="182" width="110" height="10" fill="url(#hatch)"/>
+          <rect x="40" y="160" width="90" height="22" fill="var(--steel)"/>
+          <rect x="70" y="100" width="30" height="60" fill="var(--steel)" opacity=".85"/>
+          <g id="l1"></g>
+          <circle cx="85" cy="100" r="11" fill="var(--steel)"/><circle cx="85" cy="100" r="4" fill="var(--surface)"/>
+        </svg>
+      </div>
+      <div class="view"><span class="vt">Top view · base swing</span>
+        <svg viewBox="0 0 200 200" id="top" aria-label="Top view animation">
+          <circle cx="60" cy="140" r="5" fill="var(--muted)"/>
+          <path d="M60 140 m0 -110 a110 110 0 0 1 110 110" fill="none" stroke="var(--line)" stroke-dasharray="4 4"/>
+          <rect x="155" y="125" width="30" height="30" fill="none" stroke="var(--accent)" stroke-dasharray="3 3"/>
+          <text x="150" y="172" font-size="10" fill="var(--muted)">origin</text>
+          <rect x="45" y="15" width="30" height="30" fill="none" stroke="var(--accent)" stroke-dasharray="3 3"/>
+          <text x="80" y="22" font-size="10" fill="var(--muted)">target</text>
+          <g id="topArm"></g>
+          <rect x="40" y="120" width="40" height="40" fill="var(--steel)" opacity=".85"/>
+        </svg>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="play" type="button">Play</button>
+      <input id="t" type="range" min="0" max="120" step="0.5" value="0" aria-label="Time in seconds">
+    </div>
+    <div class="readout">
+      <div class="ro"><div class="k">time</div><div class="v" id="rt">0 s</div></div>
+      <div class="ro"><div class="k">joint</div><div class="v" id="rj">0°</div></div>
+      <div class="ro"><div class="k">link-1</div><div class="v" id="r1">0°</div></div>
+      <div class="ro"><div class="k">link-2</div><div class="v" id="r2">0°</div></div>
+    </div>
+    <p class="phase" id="phase"></p>
+    <svg viewBox="0 0 640 150" id="graph" aria-label="Angle vs time for all three motors"></svg>
+    <div class="legend"><span><i style="background:var(--steel)"></i>Joint (base swing, 0→90°)</span><span><i style="background:var(--alu)"></i>Link-1 (0→25°)</span><span><i style="background:var(--accent)"></i>Link-2 (peaks at 10° in the graph)</span></div>
+    <span class="cap">Recreated from the three graphs on page 7. Ansys plots the joint as 0 to −90° (the minus is just direction); shown here as 0–90°. Motion is ramped linearly between points.</span>
+  </div>
+
+  <p>In plain words, the cycle is:</p>
+  <ol class="steps">
+    <li><span><b>0–30 s:</b> grab the block at the origin and swing 90° to the target.</span></li>
+    <li><span><b>30–60 s:</b> tilt the arms up and back down to place the block.</span></li>
+    <li><span><b>60–90 s:</b> swing back 90° to the origin.</span></li>
+    <li><span><b>90–120 s:</b> tilt up and down again to pick/drop the block at the origin.</span></li>
+  </ol>
+  <div class="note"><b>"Smooth ramping"</b> means the angle changes gradually, not instantly. An instant jump would mean infinite acceleration and fake, huge forces. Over 120 s this motion is very slow, so the dynamic forces are small and results end up close to the static ones.</div>
+
+  <div class="fig">
+    <h3>Transient results (Figs 9–12)</h3>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Body</th><th class="num">Max deformation (mm)</th><th class="num">FOS</th></tr></thead>
+      <tbody>
+        <tr><td>Base</td><td class="num">0.0058</td><td class="num">15</td></tr>
+        <tr><td>Joint</td><td class="num">0.0012</td><td class="num">15</td></tr>
+        <tr><td>Link-1</td><td class="num">0.071</td><td class="num">15</td></tr>
+        <tr><td>Link-2</td><td class="num">0.0010</td><td class="num">15</td></tr>
+      </tbody>
+    </table></div>
+    <span class="cap">Values read from the header of each plot, at the end of the run (t = 120 s). Every body shows FOS 15 (the display cap), so the moving test found nothing worse than the static test.</span>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Page 9 · Conclusion</span>
+  <h2>What they concluded</h2>
+  <div class="fig" style="flex-direction:row;flex-wrap:wrap;align-items:center;gap:20px">
+    <div style="font-family:var(--display);font-size:4.5rem;font-weight:700;line-height:1;color:var(--accent)">4.6</div>
+    <p style="flex:1;min-width:200px">The lowest safety factor anywhere, found at the <b>joint</b> while holding the 5&nbsp;kg load after a 90° turn. The joint could take about 4.6× more stress before permanently bending.</p>
+  </div>
+  <p>From that, the report says:</p>
+  <ul class="clean">
+    <li>The joint is strong enough for the moving loads.</li>
+    <li>Steel and aluminium are good material choices.</li>
+    <li>The arm is stiff and strong enough overall.</li>
+    <li>The design is fit for 2-DOF pick-and-place.</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Reading it critically</span>
+  <h2>Things worth questioning</h2>
+  <p class="muted">The overall conclusion looks reasonable, but a careful reader (or examiner) might ask about these.</p>
+  <div class="flag"><b>"Well above the acceptable limit" — which limit?</b><span class="muted">The report never states the target FOS. Common machine-design targets are around 1.5–3, so 4.6 likely passes, but the requirement should be written down.</span></div>
+  <div class="flag"><b>Joint FOS at pick-up doesn't match its stress</b><span class="muted">Joint max stress is 8.8 MPa. 250 ÷ 8.8 ≈ 28, which should display as 15, yet the FOS plot shows 9.79. The FOS plots were time-stamped a few minutes before the stress plots, so they may come from a different solve.</span></div>
+  <div class="flag"><b>"2-DOF" but three things rotate</b><span class="muted">The base swing, Link-1 and Link-2 all have their own motion. That's three rotations. Either one is not independently driven, or the arm is really 3-DOF.</span></div>
+  <div class="flag"><b>Link-2 angle: 15° or 10°?</b><span class="muted">The text says 0–15°, but the page 7 graph peaks at 10°.</span></div>
+  <div class="flag"><b>Some legends don't match their headers</b><span class="muted">Fig 9 header says max 0.0058 mm, legend tops out at 0.0008. Fig 12 says 0.0010 vs legend 0.00069. Probably custom legend ranges, but confusing.</span></div>
+  <div class="flag"><b>No stress or FOS over time for the moving test</b><span class="muted">Only end-of-run plots (t = 120 s) are shown. The worst moment could be mid-cycle, during a swing.</span></div>
+  <div class="flag"><b>Aluminium bulk modulus</b><span class="muted">From E and Poisson's ratio, K = 68.9 ÷ (3 × 0.34) ≈ 67.5 GPa, not 58. Minor, and it doesn't affect these results.</span></div>
+  <div class="flag"><b>Bolts and bearings removed</b><span class="muted">Fine for overall bending, but in reality bolts and bearings are often where joints fail. A separate bolt/bearing check would make the "joint is safe" claim stronger.</span></div>
+</section>
+
+<section>
+  <span class="eyebrow">Cheat sheet</span>
+  <h2>Glossary</h2>
+  <dl>
+    <dt>DOF</dt><dd>Degrees of freedom: how many independent ways the arm can move.</dd>
+    <dt>CAD clean-up</dt><dd>Simplifying the 3D model before simulation.</dd>
+    <dt>FEA</dt><dd>Finite Element Analysis: solving physics by splitting a part into small elements.</dd>
+    <dt>Mesh / element</dt><dd>The grid of small pieces, and each piece.</dd>
+    <dt>Static analysis</dt><dd>Loads applied, nothing moving.</dd>
+    <dt>Transient analysis</dt><dd>Loads and motion that change over time; includes inertia.</dd>
+    <dt>Fixed support</dt><dd>A boundary that can't move at all.</dd>
+    <dt>Deformation</dt><dd>How far a point moves under load (mm).</dd>
+    <dt>von Mises stress</dt><dd>One combined stress number to compare with yield strength.</dd>
+    <dt>Yield strength</dt><dd>Stress at which permanent bending starts.</dd>
+    <dt>Factor of Safety</dt><dd>Yield strength ÷ actual stress. Bigger is safer.</dd>
+  </dl>
+</section>
+
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  function bars(el,rows,max,fmt){
+    el.innerHTML=rows.map(r=>`<div class="bar"><span class="lab">${r.l}</span><span class="track">${r.mark!=null?`<span class="mark" style="left:${r.mark/max*100}%"></span>`:''}<span class="fill" style="display:block;width:${Math.max(r.v/max*100,0.4)}%;background:${r.c}"></span></span><span class="val">${fmt(r.v)}${r.sfx||''}</span></div>`).join('');
+  }
+  const S='var(--steel)',A='var(--alu)',O='var(--accent)';
+  bars($('matbars'),[
+    {l:'Density',v:7872,c:S,sfx:' kg/m³'},{l:'',v:2713,c:A,sfx:' kg/m³'}
+  ],8000,v=>v);
+  // material: separate scales per property, each relative to its max
+  const mat=[['Density',7872,2713,'kg/m³'],['Yield',250,259.2,'MPa'],['Ultimate',460,313.1,'MPa'],['Stiffness E',200,68.9,'GPa']];
+  $('matbars').innerHTML=mat.map(m=>{const mx=Math.max(m[1],m[2]);return `<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:.85rem;font-weight:600">${m[0]}</span>
+   <div class="bar"><span class="lab">Steel</span><span class="track"><span class="fill" style="display:block;width:${m[1]/mx*100}%;background:${S}"></span></span><span class="val">${m[1]} ${m[3]}</span></div>
+   <div class="bar"><span class="lab">Alu</span><span class="track"><span class="fill" style="display:block;width:${m[2]/mx*100}%;background:${A}"></span></span><span class="val">${m[2]} ${m[3]}</span></div></div>`}).join('');
+
+  const def=[['Base',0.0015562,0.00048213],['Joint',0.0071232,0.0036526],['Link-1',0.083389,0.065192],['Link-2',0.085189,0.068636]];
+  $('defbars').innerHTML=def.map(d=>`<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:.85rem;font-weight:600">${d[0]}</span>
+   <div class="bar"><span class="lab">Pick-up</span><span class="track"><span class="fill" style="display:block;width:${Math.max(d[1]/0.09*100,.4)}%;background:${O}"></span></span><span class="val">${d[1].toPrecision(3)}</span></div>
+   <div class="bar"><span class="lab">At 90°</span><span class="track"><span class="fill" style="display:block;width:${Math.max(d[2]/0.09*100,.4)}%;background:${S}"></span></span><span class="val">${d[2].toPrecision(3)}</span></div></div>`).join('');
+
+  const st=[['Base',5.1493,250,S],['Joint',8.8051,250,S],['Link-1',4.438,259.2,A],['Link-2',1.1322,259.2,A]];
+  $('strbars').innerHTML=st.map(s=>`<div class="bar"><span class="lab">${s[0]}</span><span class="track"><span class="fill" style="display:block;width:${Math.max(s[1]/260*100,.4)}%;background:${s[3]}"></span><span class="mark" style="left:${s[2]/260*100-0.5}%"></span></span><span class="val">${s[1].toFixed(2)} / ${s[2]}</span></div>`).join('')
+   +`<span class="cap" style="margin-top:2px">Red tick = yield strength of that body's material.</span>`;
+
+  const fos=[['Base',15,15],['Joint',9.7898,4.631],['Link-1',15,9.0155],['Link-2',15,15]];
+  $('fosbars').innerHTML=fos.map(f=>`<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:.85rem;font-weight:600">${f[0]}</span>
+   <div class="bar"><span class="lab">Pick-up</span><span class="track"><span class="mark" style="left:${1/15*100}%"></span><span class="fill" style="display:block;width:${f[1]/15*100}%;background:${O}"></span></span><span class="val">${f[1]==15?'≥15':f[1].toFixed(2)}</span></div>
+   <div class="bar"><span class="lab">At 90°</span><span class="track"><span class="mark" style="left:${1/15*100}%"></span><span class="fill" style="display:block;width:${f[2]/15*100}%;background:${S}"></span></span><span class="val" style="${f[2]<5?'color:var(--accent);font-weight:600':''}">${f[2]==15?'≥15':f[2].toFixed(2)}</span></div></div>`).join('');
+
+  // mesh illustration
+  let m='';const x0=360,y0=50,w=200,h=60,n=10,r=3;
+  for(let i=0;i<n;i++)for(let j=0;j<r;j++){
+    const x=x0+i*w/n,y=y0+j*h/r,dx=w/n,dy=h/r;
+    m+=`<path d="M${x} ${y}h${dx}v${dy}h${-dx}zM${x} ${y}L${x+dx} ${y+dy}" fill="var(--alu)" fill-opacity=".25" stroke="var(--alu)" stroke-width="1"/>`;
+  }
+  $('meshg').innerHTML=m;
+
+  // motion
+  const lerp=(a,b,u)=>a+(b-a)*Math.min(1,Math.max(0,u));
+  function joint(t){if(t<30)return lerp(0,90,t/30);if(t<60)return 90;if(t<90)return lerp(90,0,(t-60)/30);return 0}
+  function tri(t,pk){const seg=(s,e)=>{const mid=(s+e)/2;return t<mid?lerp(0,pk,(t-s)/(mid-s)):lerp(pk,0,(t-mid)/(e-mid))};
+    if(t>=30&&t<=58)return seg(30,58);if(t>=92&&t<=120)return seg(92,120);return 0}
+  const l1=t=>tri(t,25), l2=t=>tri(t,10);
+
+  // graph
+  const G=$('graph'),gx=v=>40+v/120*590,gy=v=>130-v/90*115;
+  let g=`<g font-size="10" fill="var(--muted)">`;
+  [0,30,60,90,120].forEach(v=>{g+=`<line x1="${gx(v)}" y1="15" x2="${gx(v)}" y2="130" stroke="var(--line)"/><text x="${gx(v)}" y="144" text-anchor="middle">${v}s</text>`});
+  [0,25,45,90].forEach(v=>{g+=`<text x="34" y="${gy(v)+3}" text-anchor="end">${v}°</text>`});
+  g+='</g>';
+  const line=(f,c)=>{let d='';for(let t=0;t<=120;t+=0.5)d+=(t?'L':'M')+gx(t).toFixed(1)+' '+gy(f(t)).toFixed(1);return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2.2"/>`};
+  g+=line(joint,S)+line(l1,A)+line(l2,O)+`<line id="cur" x1="40" y1="12" x2="40" y2="130" stroke="var(--ink)" stroke-width="1.2"/>`;
+  G.innerHTML=g;
+
+  const phases=[[30,'Swinging 90° from the origin toward the target, carrying the block.'],[60,'At the target: arms tilt up and back down to place the block.'],[90,'Swinging back 90° to the origin.'],[121,'At the origin: arms tilt up and down again to pick / drop the block.']];
+  function draw(t){
+    const a1=l1(t)*Math.PI/180,a2=l2(t)*Math.PI/180,px=85,py=100,L1=165,L2=55;
+    const ex=px+L1*Math.cos(a1),ey=py-L1*Math.sin(a1);
+    const dir=Math.PI/2-a1+a2; // downward, rotated with link1, plus link2
+    const fx=ex+L2*Math.cos(dir),fy=ey+L2*Math.sin(dir);
+    const carrying=t<60||t>=92; // illustrative
+    $('l1').innerHTML=`<line x1="${px}" y1="${py}" x2="${ex}" y2="${ey}" stroke="var(--alu)" stroke-width="14" stroke-linecap="round"/>
+      <line x1="${ex}" y1="${ey}" x2="${fx}" y2="${fy}" stroke="var(--alu)" stroke-width="10" stroke-linecap="round" opacity=".85"/>
+      <circle cx="${ex}" cy="${ey}" r="4" fill="var(--surface)"/>
+      <rect x="${fx-15}" y="${fy+4}" width="30" height="24" rx="3" fill="var(--steel)" opacity=".6"/>`;
+    const j=joint(t)*Math.PI/180,cx=60,cy=140,R=110;
+    const tx=cx+R*Math.cos(-j),ty=cy+R*Math.sin(-j);
+    $('topArm').innerHTML=`<line x1="${cx}" y1="${cy}" x2="${tx}" y2="${ty}" stroke="var(--alu)" stroke-width="12" stroke-linecap="round"/><rect x="${tx-11}" y="${ty-11}" width="22" height="22" fill="var(--steel)" opacity=".7"/>`;
+    $('cur').setAttribute('x1',gx(t));$('cur').setAttribute('x2',gx(t));
+    $('rt').textContent=t.toFixed(0)+' s';$('rj').textContent=joint(t).toFixed(0)+'°';$('r1').textContent=l1(t).toFixed(1)+'°';$('r2').textContent=l2(t).toFixed(1)+'°';
+    $('phase').innerHTML='<b>Now:</b> '+phases.find(p=>t<p[0])[1];
+  }
+  const sl=$('t');let raf=null,last=0;
+  sl.addEventListener('input',()=>draw(+sl.value));
+  function step(ts){if(!last)last=ts;let t=+sl.value+(ts-last)/1000*12;last=ts;if(t>120)t=0;sl.value=t;draw(t);raf=requestAnimationFrame(step)}
+  $('play').addEventListener('click',()=>{if(raf){cancelAnimationFrame(raf);raf=null;$('play').textContent='Play'}else{last=0;raf=requestAnimationFrame(step);$('play').textContent='Pause'}});
+  draw(0);
+})();
+</script>
+
+</body>
+</html>
