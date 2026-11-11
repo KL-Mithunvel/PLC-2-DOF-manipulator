@@ -124,7 +124,32 @@ Note: %VW2400 overlaps %VD2400 (shoulder point 1), because VD2400 occupies VW240
 5. Check the drives are set to 1000 kbps with node IDs 1 and 2 and the heartbeat times above.
 6. The %VW2400 overlap (item 2) is visible in the ladder: Network 36 writes 0 to %VW2400.
 
-## 6. HMI (`PLC and HMI/HMI  V2`, DTools): NOT yet documented
-Status: DTools 4.5.1 is installed at `C:\Kinco\Kinco DTools V4.5.1\Kinco DTools.exe` but needs administrator approval (UAC) to start, so it has not been opened yet.
-`HMI  V2.dpj` and all screen `.whe` files are encrypted (`KINCOEN` header), so they can't be read from disk. Only `PLCGEDefaultProperties.xml` is readable: default widget templates bound to M20.5, M50.1, VD2030, VD2040 and internal LW/LB. The project is 1024x600 with screens Frame0 (main), Frame11 (x2), SETTING and the standard system windows.
-To finish: open it in DTools and record each screen (screenshot), each widget's PLC address, the PLC connection (type, IP, port, station) and the HMI's own IP.
+## 6. HMI (`PLC and HMI/HMI  V2`, DTools 4.5.1)
+
+Panel: Kinco **M2070HE-WIFI**, 1024x600, connected to the PLC over Ethernet (driver "Kinco PLC Ethernet (TCP)", PLC as TCP slave, port 502, station 1). The PLC project is set to 192.168.0.252; the panel itself is 192.168.0.100 (subnet 255.255.255.0, gateway 192.168.0.1). `HMI  V2.dpj` and the screen `.whe` files are encrypted, so everything below was recorded by opening the project in DTools (it must be started with administrator approval).
+
+Screens, as shown in the DTools editor (red labels such as `TXT1`, `NI0` are widget tags; `####` is a numeric field):
+
+### 6.1 Connection view
+![HMI to PLC connection in DTools](img/hmi/hmi_network_topology.png)
+
+### 6.2 Auto screen (Frame0, window 10)
+Number of cycles, cycle time (min:sec) and actual cycle number with RESET; START / STOP; HOME indicators for the base and shoulder motors; buttons to MANUAL and SETTING.
+![Auto screen](img/hmi/hmi_auto.png)
+
+### 6.3 Manual screen (Frame11, window 0)
+Base motor FWD / REV with speed entry (rated 1000 RPM, max 1500 RPM), shoulder motor UP / DOWN with speed entry (rated 1500 RPM, max 2000 RPM), electromagnet switch and an AUTO button.
+![Manual screen](img/hmi/hmi_manual.png)
+
+### 6.4 Settings screen (window 12)
+Teach table for INITIALIZATION and POSITION 1 to 4: one base-motor (M1) and one shoulder-motor (M2) value each, with a TEACH button per column, plus PICK / DROP markers, jog buttons and speed entries.
+![Settings screen](img/hmi/hmi_settings.png)
+
+### 6.5 Wi-Fi / network screen (window 11)
+Wi-Fi switch, network list, password entry, join / remove network, IP, server selection and virtual IP.
+![Wi-Fi and network screen](img/hmi/hmi_wifi_network.png)
+
+### 6.6 Login popup (window 9)
+![Login popup](img/hmi/hmi_login.png)
+
+Still to record: each widget's PLC address (cross-check against section 3) and the Frame0/Frame11 navigation logic.

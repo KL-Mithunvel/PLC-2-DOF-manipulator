@@ -594,6 +594,16 @@ svg text{font-family:var(--mono)}
     <span class="cap">Step flags are M31.0 to M31.7 and M32.0. M30.1 is "auto running" and M30.2 is "stop or complete". Read from networks 21 to 35 of the ladder.</span>
   </div>
 
+  <h3>The operator screens</h3>
+  <p>The M2070HE panel runs four working screens, shown here as they appear in the Kinco DTools editor. Auto handles the cycle count, timer and start/stop; Manual jogs each motor and switches the magnet; Settings teaches the five positions; the network screen sets up Wi-Fi.</p>
+  <div class="gallery">
+    <figure class="shot"><button type="button" data-zoom><img src="img/hmi/hmi_auto.png" alt="HMI auto screen with cycle count, cycle time, start and stop" loading="lazy"></button><figcaption>Auto: cycle count, cycle time, START / STOP and home indicators.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/hmi/hmi_manual.png" alt="HMI manual screen with base and shoulder jog buttons and magnet switch" loading="lazy"></button><figcaption>Manual: base FWD / REV, shoulder UP / DOWN, speed entry and electromagnet switch.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/hmi/hmi_settings.png" alt="HMI settings screen with teach positions for both motors" loading="lazy"></button><figcaption>Settings: initialization and four taught positions for both motors, with TEACH buttons.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/hmi/hmi_wifi_network.png" alt="HMI Wi-Fi and network screen" loading="lazy"></button><figcaption>Wi-Fi and network setup.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/hmi/hmi_network_topology.png" alt="DTools connection view: M2070HE-WIFI panel connected to the Kinco PLC over Ethernet" loading="lazy"></button><figcaption>Connection view: panel to PLC over Ethernet (TCP).</figcaption></figure>
+  </div>
+
   <h3>Memory the operator panel uses</h3>
   <p>The HMI project reads and writes these PLC addresses. They are inferred from the ladder program and from the panel's default widget settings, which bind to M20.5, M50.1, %VD2030 and %VD2040.</p>
   <div class="tblwrap"><table>
