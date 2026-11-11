@@ -132,6 +132,18 @@ input[type=range]{flex:1;min-width:160px;accent-color:var(--accent)}
 .skills span{font-size:.84rem;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--surface)}
 footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}
 svg text{font-family:var(--mono)}
+/* PLC program section */
+.gallery.big{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.stepper{display:flex;flex-direction:column;gap:12px}
+.sbs{display:flex;flex-wrap:wrap;gap:6px}
+.sb{font-family:var(--mono);font-size:.78rem;padding:6px 10px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);cursor:pointer}
+.sb[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.detail{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}
+.detail>div{background:var(--soft);border-radius:4px;padding:10px 12px;min-width:0;overflow-wrap:anywhere}
+.detail .k{font-family:var(--mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px}
+.pill{display:inline-block;font-family:var(--mono);font-size:.75rem;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pill.on{background:var(--good);border-color:var(--good);color:var(--bg)}
+.codebits{font-family:var(--mono);font-size:.84rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -488,6 +500,167 @@ svg text{font-family:var(--mono)}
   </div>
 </section>
 
+<section id="plc-program">
+  <span class="eyebrow">Step 3 · Inside the PLC program</span>
+  <h2>How the ladder program moves the arm</h2>
+  <p>The program is one ladder routine called <b>MAIN</b>, 39 networks long, written in KincoBuilder 8.5 for the K615S-16DT. It does not count pulses. Instead it writes a target position for each joint into the servo drives over <b>CANopen</b> and reads the actual position back, so the PLC is a coordinator and the drives run their own position loops. The two sub-routines SBR_0 and SBR_1 are empty.</p>
+  <p class="note"><b>Note:</b> the pulse and direction outputs shown in the electrical drawings (Q0.0 to Q0.3) are not used by this saved program. Motion goes over the CAN bus. The magnet output Q0.7 and the e-stop input I0.0 are used as drawn.</p>
+
+  <h3>One program, six jobs</h3>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Networks</th><th>Job</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">0–2, 6–8</td><td>Drive enable</td><td>Writes the CiA 402 controlword for each drive (see below).</td></tr>
+      <tr><td class="mono">3–5, 9–11</td><td>Jog and hold</td><td>Manual buttons write fixed jog targets. With nothing requested, the target follows the actual position so the arm holds still.</td></tr>
+      <tr><td class="mono">12</td><td>Teach</td><td>Five HMI buttons (M22.0 to M22.4) copy the current positions into five stored points.</td></tr>
+      <tr><td class="mono">13–16</td><td>Homing</td><td>Drives both axes to fixed home counts and raises the home flags M50.0 and M50.1.</td></tr>
+      <tr><td class="mono">17</td><td>Magnet</td><td>Q0.7 is on when the HMI button M20.5 or the auto-cycle flag M30.6 is on.</td></tr>
+      <tr><td class="mono">18–35</td><td>Auto cycle</td><td>Steps through the taught points, switches the magnet and counts cycles.</td></tr>
+      <tr><td class="mono">19–20, 28, 36–38</td><td>Counters</td><td>Count finished cycles and elapsed time and copy them to HMI registers.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Talking to the drives</h3>
+  <p>The PLC is the CANopen master, node 127, at <b>1000&nbsp;kbps</b>. The base drive is node 1 and the shoulder drive is node 2. Each drive exchanges three receive PDOs (commands) and up to three transmit PDOs (feedback). The PDO table in KincoBuilder maps each CANopen object to a PLC memory address, so ladder code reads and writes those addresses like any other variable.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>CANopen object</th><th>Base · node 1</th><th>Shoulder · node 2</th></tr></thead>
+    <tbody>
+      <tr><td>6040 Controlword (out)</td><td class="mono">%VW1000</td><td class="mono">%VW1024</td></tr>
+      <tr><td>6060 Modes of operation (out)</td><td class="mono">%VB1010</td><td class="mono">%VB1026</td></tr>
+      <tr><td>607A Target position (out)</td><td class="mono">%VD1002</td><td class="mono">%VD1028</td></tr>
+      <tr><td>60FF Target velocity (out)</td><td class="mono">%VD1006</td><td class="mono">%VD1032</td></tr>
+      <tr><td>6083 Profile acceleration (out)</td><td class="mono">%VD1014</td><td class="mono">%VD1036</td></tr>
+      <tr><td>260A Electronic gear numerator (out)</td><td>not mapped</td><td class="mono">%VW1040</td></tr>
+      <tr><td>6041 Statusword (in)</td><td class="mono">%VW1012</td><td class="mono">%VW1042</td></tr>
+      <tr><td>6060 Modes of operation (in)</td><td class="mono">%VB1011</td><td class="mono">%VB1027</td></tr>
+      <tr><td>6064 Position actual (in)</td><td class="mono">%MD600</td><td class="mono">%VD1044</td></tr>
+      <tr><td>606C Velocity actual (in)</td><td class="mono">%VD1018</td><td class="mono">%VD1048</td></tr>
+      <tr><td>6078 Current actual (in)</td><td class="mono">%VW1022</td><td>not mapped</td></tr>
+      <tr><td>607A Target position read-back (in)</td><td>not mapped</td><td class="mono">%VD1052</td></tr>
+      <tr><td>COB-IDs, receive PDO 1 / 2 / 3</td><td class="mono">0x201 / 0x301 / 0x401</td><td class="mono">0x202 / 0x302 / 0x402</td></tr>
+      <tr><td>COB-IDs, transmit PDO 1 / 2 / 3</td><td class="mono">0x181 / 0x281 / 0x381</td><td class="mono">0x182 / 0x282 / 0x382</td></tr>
+    </tbody>
+  </table></div>
+  <div class="grid2">
+    <div class="part"><span class="tag">CANopen network</span><ul class="clean">
+      <li>Baud rate 1000&nbsp;kbps, SDO timeout 60&nbsp;ms</li>
+      <li>Configure slaves at start-up, power-on delay 3&nbsp;s</li>
+      <li>Heartbeat: drives send every 500&nbsp;ms, PLC accepts up to 600&nbsp;ms</li>
+      <li>If a node goes silent the PLC stops that node</li>
+      <li>PLC's own CANopen slave function is off</li>
+    </ul></div>
+    <div class="part"><span class="tag">Ethernet and serial</span><ul class="clean">
+      <li>PLC address 192.168.0.252, mask 255.255.255.0, gateway 192.168.0.1</li>
+      <li>Modbus TCP on port 502, timeout 2000&nbsp;ms</li>
+      <li>Port 0 at 115200, ports 1 and 2 (RS485) at 9600, all 8 data bits, no parity, 1 stop bit</li>
+      <li>The HMI must sit on 192.168.0.x with an address other than 252</li>
+    </ul></div>
+  </div>
+
+  <h3>Drive enable: three controlword values</h3>
+  <p>Networks 0 to 2 and 6 to 8 decide what to write into each drive's controlword. The values follow the standard CiA 402 bit layout.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th class="num">Value</th><th>Hex</th><th>Written when</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="num">271</td><td class="mono">0x010F</td><td>I0.0 is off (e-stop open)</td><td>Operation-enabled bits plus the Halt bit, so the axis stops</td></tr>
+      <tr><td class="num">47</td><td class="mono">0x002F</td><td>I0.0 is on and a move is requested, after a short on-delay (T2 or T3)</td><td>Operation enabled with "change set-point immediately", so a new target takes effect at once</td></tr>
+      <tr><td class="num">15</td><td class="mono">0x000F</td><td>The request ends, after an off-delay (T1 or T4)</td><td>Operation enabled, no new set-point; the drive holds position</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Holding position and jogging</h3>
+  <p>Each axis has a target position in encoder counts. When the operator holds a jog button, the program writes a fixed target far out in that direction and sets the speed from the HMI. When nothing is requested (networks 4 and 10), the target is simply copied from the actual position, so the drive keeps holding where it stopped. Releasing a button therefore stops the arm without a separate stop command.</p>
+
+  <h3>Teach, home and the auto cycle</h3>
+  <p>Teaching copies the live positions into stored points: base positions in %VD2300 to %VD2316 and shoulder positions in %VD2400 to %VD2416, four bytes apart, five points each. Homing moves both axes to fixed counts and checks them against thresholds (base below −745000, shoulder above −57648500). The auto cycle only starts when both home flags are set.</p>
+  <p>Each auto step does the same thing. It loads the taught pair for that point into the two target registers, builds a window of ±2000 counts around each target in %VD3000 to %VD3110, and sets the step's flag when both actual positions are inside their windows. The next step starts from that flag. Pick a step to see which networks and addresses it uses.</p>
+  <div class="fig">
+    <div class="stepper" id="stepper">
+      <div class="sbs" id="sbs" role="group" aria-label="Auto cycle steps"></div>
+      <div class="detail">
+        <div><span class="k">Step</span><b id="d-name"></b></div>
+        <div><span class="k">Networks</span><span class="codebits" id="d-nets"></span></div>
+        <div><span class="k">Flag set</span><span class="codebits" id="d-flag"></span></div>
+        <div><span class="k">Targets loaded</span><span class="codebits" id="d-tgt"></span></div>
+        <div><span class="k">Moves on when</span><span id="d-adv"></span></div>
+        <div><span class="k">Magnet Q0.7</span><span class="pill" id="d-mag"></span></div>
+      </div>
+      <div class="controls">
+        <button class="play" id="sprev" type="button">Previous</button>
+        <button class="play" id="snext" type="button">Next</button>
+        <button class="play" id="splay" type="button">Play</button>
+      </div>
+    </div>
+    <span class="cap">Step flags are M31.0 to M31.7 and M32.0. M30.1 is "auto running" and M30.2 is "stop or complete". Read from networks 21 to 35 of the ladder.</span>
+  </div>
+
+  <h3>Memory the operator panel uses</h3>
+  <p>The HMI project reads and writes these PLC addresses. They are inferred from the ladder program and from the panel's default widget settings, which bind to M20.5, M50.1, %VD2030 and %VD2040.</p>
+  <div class="tblwrap"><table>
+    <thead><tr><th>Address</th><th>Direction</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">M20.1 / M20.2</td><td>HMI → PLC</td><td>Base: jog / go to position</td></tr>
+      <tr><td class="mono">M20.3 / M20.4</td><td>HMI → PLC</td><td>Shoulder: jog / go to position</td></tr>
+      <tr><td class="mono">M20.5</td><td>HMI → PLC</td><td>Manual magnet</td></tr>
+      <tr><td class="mono">M22.0 – M22.4</td><td>HMI → PLC</td><td>Teach points 1 to 5</td></tr>
+      <tr><td class="mono">M30.0</td><td>HMI → PLC</td><td>Auto start</td></tr>
+      <tr><td class="mono">%VD2020 / %VD2030</td><td>HMI → PLC</td><td>Base / shoulder speed</td></tr>
+      <tr><td class="mono">%VW2036</td><td>HMI → PLC</td><td>Number of cycles wanted</td></tr>
+      <tr><td class="mono">%VD2300 – %VD2316, %VD2400 – %VD2416</td><td>both</td><td>Taught base / shoulder positions</td></tr>
+      <tr><td class="mono">M50.0 / M50.1</td><td>PLC → HMI</td><td>Shoulder / base at home</td></tr>
+      <tr><td class="mono">%VW2400 / %VW2500 / %VW2510</td><td>PLC → HMI</td><td>Cycle count and two elapsed-time counters</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Things to check on the program</h3>
+  <div class="flags">
+    <div class="flag"><b>Overlapping registers</b><span>The cycle counter is copied to %VW2400, which is the first two bytes of the shoulder's first taught point %VD2400. Clearing or counting overwrites that point. Moving the counter mirror fixes it.</span></div>
+    <div class="flag"><b>Nothing is retentive</b><span>All four retentive ranges are set to length 0, so taught points and counters reset at power-off. Teach again after each restart, or move them into the permanent area.</span></div>
+    <div class="flag"><b>Drive mode is set elsewhere</b><span>Modes of operation (6060) is mapped but never written by the program. The drives must already be in position mode.</span></div>
+    <div class="flag"><b>Counts are unscaled</b><span>Jog and home constants are raw encoder counts. Recording counts per degree next to them would make the program readable.</span></div>
+    <div class="flag"><b>HMI screens</b><span>The panel project file is encrypted and has not been opened yet, so its screenshots are not included on this page.</span></div>
+  </div>
+
+  <h3>KincoBuilder screenshots: settings</h3>
+  <div class="gallery big">
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_hardware_io.png" alt="KincoBuilder Hardware page, I/O tab for the K615S-16DT" loading="lazy"></button><figcaption>Hardware, I/O tab: K615S-16DT with 8 inputs and 8 outputs.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_hardware_comm.png" alt="KincoBuilder Hardware page, Comm tab with serial port settings" loading="lazy"></button><figcaption>Hardware, Comm tab: port 0 at 115200, ports 1 and 2 at 9600.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_hardware_retentive.png" alt="KincoBuilder Hardware page, Reten tab with empty retentive ranges" loading="lazy"></button><figcaption>Hardware, Reten tab: no retentive ranges.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_hardware_others.png" alt="KincoBuilder Hardware page, Others tab" loading="lazy"></button><figcaption>Hardware, Others tab: project backup on, CANopen slave off.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_canopen_global.png" alt="CANopen global settings: 1000 kbps, SDO timeout 60 ms" loading="lazy"></button><figcaption>CANopen, Global Settings: 1000&nbsp;kbps, SDO timeout 60&nbsp;ms, configure slaves at start-up.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_canopen_network.png" alt="CANopen network settings listing two AIM slaves with heartbeat error control" loading="lazy"></button><figcaption>CANopen, Network settings: two AIM drives, heartbeat 500&nbsp;ms, consumer time 600&nbsp;ms.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_canopen_mapping.png" alt="CANopen mapping parameters page" loading="lazy"></button><figcaption>CANopen, Mapping Parameters: the PDO mapping editor for both slaves.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_canopen_summary.png" alt="CANopen summary table of mapped objects and PLC variables" loading="lazy"></button><figcaption>CANopen, Summary: every mapped object with its PLC variable.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/kincobuilder_tcpip.png" alt="TCP/IP configuration dialog showing 192.168.0.252, port 502" loading="lazy"></button><figcaption>TCP/IP Settings: 192.168.0.252, port 502.</figcaption></figure>
+  </div>
+
+  <h3>KincoBuilder screenshots: ladder diagram, left half</h3>
+  <p class="muted">Ten screens from the top of MAIN (Network 0) to the bottom (Network 38). Click an image to enlarge it.</p>
+  <div class="gallery big">
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_01.png" alt="Ladder diagram, left half, screen 1 of 10" loading="lazy"></button><figcaption>Left half, screen 1 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_02.png" alt="Ladder diagram, left half, screen 2 of 10" loading="lazy"></button><figcaption>Left half, screen 2 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_03.png" alt="Ladder diagram, left half, screen 3 of 10" loading="lazy"></button><figcaption>Left half, screen 3 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_04.png" alt="Ladder diagram, left half, screen 4 of 10" loading="lazy"></button><figcaption>Left half, screen 4 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_05.png" alt="Ladder diagram, left half, screen 5 of 10" loading="lazy"></button><figcaption>Left half, screen 5 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_06.png" alt="Ladder diagram, left half, screen 6 of 10" loading="lazy"></button><figcaption>Left half, screen 6 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_07.png" alt="Ladder diagram, left half, screen 7 of 10, Networks 25 to 29" loading="lazy"></button><figcaption>Left half, screen 7 of 10 (Networks 25 to 29).</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_08.png" alt="Ladder diagram, left half, screen 8 of 10" loading="lazy"></button><figcaption>Left half, screen 8 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_09.png" alt="Ladder diagram, left half, screen 9 of 10" loading="lazy"></button><figcaption>Left half, screen 9 of 10.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_left_10.png" alt="Ladder diagram, left half, screen 10 of 10, end of the program" loading="lazy"></button><figcaption>Left half, screen 10 of 10 (end of the program).</figcaption></figure>
+  </div>
+
+  <h3>KincoBuilder screenshots: ladder diagram, right half</h3>
+  <p class="muted">The long networks continue past the left screens. These show their right ends, with the final blocks and the set and reset coils. They line up with the left screens above.</p>
+  <div class="gallery big">
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_right_01.png" alt="Ladder diagram, right half, top of the program" loading="lazy"></button><figcaption>Right half, top of the program.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_right_02.png" alt="Ladder diagram, right half, screen 2 of 6" loading="lazy"></button><figcaption>Right half, screen 2 of 6.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_right_03.png" alt="Ladder diagram, right half, screen 3 of 6, Networks 25 to 27 ending in set coils" loading="lazy"></button><figcaption>Right half, screen 3 of 6 (same rows as left screen 7).</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_right_04.png" alt="Ladder diagram, right half, screen 4 of 6" loading="lazy"></button><figcaption>Right half, screen 4 of 6.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_right_05.png" alt="Ladder diagram, right half, screen 5 of 6" loading="lazy"></button><figcaption>Right half, screen 5 of 6.</figcaption></figure>
+    <figure class="shot"><button type="button" data-zoom><img src="img/plc/ladder_right_06.png" alt="Ladder diagram, right half, bottom of the program" loading="lazy"></button><figcaption>Right half, bottom of the program.</figcaption></figure>
+  </div>
+</section>
+
 <section>
   <span class="eyebrow">Engineering judgement</span>
   <h2>Next validation steps</h2>
@@ -589,6 +762,32 @@ svg text{font-family:var(--mono)}
   function step(ts){if(!last)last=ts;let t=+sl.value+(ts-last)/1000*12;last=ts;if(t>120)t=0;sl.value=t;draw(t);raf=requestAnimationFrame(step)}
   $('play').addEventListener('click',()=>{if(raf){cancelAnimationFrame(raf);raf=null;$('play').textContent='Play'}else{last=0;raf=requestAnimationFrame(step);$('play').textContent='Pause'}});
   draw(0);
+
+  // auto-cycle stepper
+  const steps=[
+    {n:'Home',nets:'N13 to N16',flag:'M50.0, M50.1',tgt:'Home counts: base %VD1002, shoulder %VD1028',adv:'Base below −745000 and shoulder above −57648500 counts',mag:0},
+    {n:'Point 1',nets:'N21',flag:'M31.0',tgt:'%VD2300 → %VD1002 and %VD2400 → %VD1028',adv:'Both axes within ±2000 counts of the targets',mag:0},
+    {n:'Point 2',nets:'N22',flag:'M31.1',tgt:'%VD2304 → %VD1002 and %VD2404 → %VD1028',adv:'Both axes within ±2000 counts',mag:0},
+    {n:'Point 3 (pick)',nets:'N23',flag:'M31.2, also M30.6',tgt:'%VD2308 → %VD1002 and %VD2408 → %VD1028',adv:'Both axes within window; the magnet switches on',mag:1},
+    {n:'Dwell',nets:'N24',flag:'M31.3',tgt:'Targets unchanged',adv:'On-delay T21 (preset 20) has finished',mag:1},
+    {n:'Lift to point 2',nets:'N25',flag:'M31.4',tgt:'%VD2304 and %VD2404',adv:'Both axes within ±2000 counts',mag:1},
+    {n:'Point 4',nets:'N26',flag:'M31.5',tgt:'%VD2312 and %VD2412',adv:'Both axes within ±2000 counts',mag:1},
+    {n:'Point 5 (place)',nets:'N27',flag:'M31.6',tgt:'%VD2316 and %VD2416',adv:'Both axes within window',mag:1},
+    {n:'Release and count',nets:'N28 to N30',flag:'M31.7',tgt:'Targets unchanged',adv:'On-delays T22 and T23 release the magnet (M30.6 reset) and C2 counts the cycle; T26 then sets the flag',mag:0},
+    {n:'Repeat or stop',nets:'N31 to N35',flag:'M32.0, or M30.2 to stop',tgt:'Point 4, then point 2, then back to point 3; or point 1 to finish',adv:'C2 (cycles done) reaches %VW2036 (cycles wanted)',mag:0}
+  ];
+  let si=0,sTimer=null;
+  const sbs=$('sbs');
+  steps.forEach((s,i)=>{const b=document.createElement('button');b.type='button';b.className='sb';b.textContent=(i+1)+'. '+s.n;b.setAttribute('aria-pressed','false');b.addEventListener('click',()=>{stopPlay();show(i)});sbs.appendChild(b)});
+  function show(i){si=(i+steps.length)%steps.length;const s=steps[si];
+    [...sbs.children].forEach((b,k)=>b.setAttribute('aria-pressed',k===si?'true':'false'));
+    $('d-name').textContent=s.n;$('d-nets').textContent=s.nets;$('d-flag').textContent=s.flag;$('d-tgt').textContent=s.tgt;$('d-adv').textContent=s.adv;
+    const m=$('d-mag');m.textContent=s.mag?'on':'off';m.className='pill'+(s.mag?' on':'')}
+  function stopPlay(){if(sTimer){clearInterval(sTimer);sTimer=null;$('splay').textContent='Play'}}
+  $('sprev').addEventListener('click',()=>{stopPlay();show(si-1)});
+  $('snext').addEventListener('click',()=>{stopPlay();show(si+1)});
+  $('splay').addEventListener('click',()=>{if(sTimer){stopPlay()}else{$('splay').textContent='Pause';sTimer=setInterval(()=>show(si+1),2200)}});
+  show(0);
 })();
 </script>
 
