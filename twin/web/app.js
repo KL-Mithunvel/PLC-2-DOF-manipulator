@@ -403,6 +403,10 @@ function render() {
     drawScene(cvTop, "top"); drawScene(cvSide, "side");
     const ld = s.load;
     $("#viewInfo").innerHTML = `payload on magnet: <b>${ld.payload_kg.toFixed(1)} kg</b> &nbsp;|&nbsp; shoulder gravity torque ${ld.t_grav.toFixed(1)} N&middot;m (unloaded ${ld.t_grav_unloaded.toFixed(1)}) &nbsp;|&nbsp; J<sub>sh</sub> ${ld.j_shoulder.toFixed(2)} &nbsp; J<sub>base</sub> ${ld.j_base.toFixed(2)} kg&middot;m&sup2;`;
+    if (s.ghost && s.ghost.geom) {
+      const g = s.ghost, d = Math.hypot(...s.geom.tip.map((v, i) => (v - g.geom.tip[i]) * 1000));
+      $("#viewInfo").innerHTML += `<br><span style="color:#4ae0ff">ghost (${g.source}) &Delta; base ${(g.base.deg - s.base.deg).toFixed(2)}&deg; &nbsp; shoulder ${(g.shoulder.deg - s.shoulder.deg).toFixed(2)}&deg; &nbsp; tip ${d.toFixed(1)} mm</span>`;
+    }
     if (frame % 3 === 0) {
       axisCard($("#axBase"), "Base motor &mdash; node 1 &middot; M8025 101:1", s.base, `<tr><td>inertia J</td><td>${ld.j_base.toFixed(2)} kg&middot;m&sup2;</td></tr>`);
       axisCard($("#axSh"), "Shoulder motor &mdash; node 2 &middot; M8010 81:1", s.shoulder, `<tr><td>gravity torque</td><td>${ld.t_grav.toFixed(1)} N&middot;m</td></tr>`);
