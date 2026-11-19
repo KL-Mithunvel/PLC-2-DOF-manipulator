@@ -96,3 +96,34 @@ Phase 0 and the offline half of Phase 1 need nothing from you; Phases 4 and 6 ar
 | Sensor part choice, MCU, mounting | Phase 3 |
 | CAD (STEP/meshes), mass properties, Ansys exports | Phases 4, 5 |
 | Camera model, accuracy target, lighting | Phase 6 |
+
+---
+
+# Status after the overnight build (2026-11-19)
+
+Everything buildable without new inputs was built and tested (63 Python tests, 2 node test files, headless-browser smoke test). **Nothing has touched the real PLC, drives, sensors or a camera**: every "built" item below was verified against the twin, synthetic images or simulated feeds only.
+
+| Phase | Built | Verified how | Still needs |
+|---|---|---|---|
+| 0 Foundation | schema v1 (`docs/SCHEMA.md`), recorder per source, replay, ghost/shadow arm, source selector, `requirements.txt`, `run_tests.py` | unit + HTTP tests | - |
+| 1 Live PLC | read-only Modbus TCP reader, address-offset scan, twin as Modbus server, shadow error readout (`docs/LIVE_PLC_USAGE.md`) | reader vs twin server, writes refused | **real PLC**: network access and the Kinco address table (offsets are assumed) |
+| 2 Calibration | config overrides (`twin_config.json`), cycle-time fit tool, live Settings tab | fit recovers known speed / timer base | your real 3-cycle time and taught counts |
+| 3 Sensors | UDP/serial ingest, simulator, torque-constant fit, scope/axis-card overlays, ESP32 + INA226 firmware sketch | synthetic feed recovers kt within 5 % | **real hardware**; the firmware has never been compiled or run |
+| 4 CAD + physics | STL/OBJ -> GLB + mass-property import (`docs/CAD_IMPORT.md`), rigid-body dynamics with coupling, attach in 3D | box test reproduces the paper's 30.9 N.m; GLTFLoader attach in browser | **the CAD files** (STEP must be converted to STL) |
+| 5 Load graph | stress / deflection / FOS vs time with Ansys reference lines | reproduces Ansys Pose A stresses exactly | per-pose FEA exports for a real lookup (currently linear scaling from Pose A) |
+| 6 Mocap | ArUco tracker, calibration, camera placement check, live source, run comparison, tag generator, hardware-free demo (`docs/MOCAP_PLAN.md`) | synthetic images: 0.5 deg RMS, 5 mm tip | **camera + printed tags**; real lens/lighting errors unknown |
+| 7 Gaps | Wi-Fi and Login screens, graphical ladder diagram, live Settings, UI smoke test, PLC findings doc with patch options (`docs/PLC_FINDINGS.md`) | node + browser tests | decision on the proposed ladder fixes |
+
+## Known limits (honest list)
+- Structural graph is a linear scaling of the Ansys Pose A results by the live bending moment, not a FEA solve. The paper's own joint FOS (9.79 / 4.63) contradicts its stress plot, so the graph shows both.
+- Mocap accuracy numbers come from rendered images without lens distortion, blur or occlusion by the arm body.
+- HMI button behaviour (momentary vs maintained) and the Kinco Modbus mapping are assumptions.
+- Timer base 10 ms, `%SM0.3` = 1 s, drive profile speed 500 rpm, accelerations, torque constants, shoulder height, drop link, rotor inertias are assumed (`[assumed]` in `twin/config.py`).
+- The IL interpreter covers the instructions the program uses; a different program needs checking for other opcodes (it raises on unknown ones).
+
+## Next steps that need you
+1. Real 3-cycle time and taught counts -> `python -m tools.calibrate_cycle`.
+2. CAD (STL per body in the home pose) -> `python -m tools.import_cad`.
+3. Network access + Kinco address table -> `python -m live.scan`, then `python run_twin.py --plc 192.168.0.252`.
+4. Camera + 4 printed tags -> `tools.make_tags`, `mocap.calibrate`, `run_twin.py --mocap`.
+5. Sensor parts -> build the firmware, `run_twin.py --sensors`.

@@ -1,4 +1,4 @@
-"""Run every test: python run_tests.py   (Python unit tests + node scene smoke test if node is available)."""
+"""Run every test: python run_tests.py   (Python unit tests + node scene/ladder tests if node is available)."""
 import shutil
 import subprocess
 import sys
@@ -7,7 +7,7 @@ import unittest
 suite = unittest.defaultTestLoader.discover("tests", pattern="test_*.py")
 ok = unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful()
 if shutil.which("node"):
-    for f in ("tests/test_arm3d.mjs",):
+    for f in ("tests/test_arm3d.mjs", "tests/test_ladder.mjs"):
         print("node", f)
         ok &= subprocess.run(["node", "--import", "./tests/node_register.mjs", f]).returncode == 0
 else:

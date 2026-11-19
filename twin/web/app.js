@@ -162,6 +162,7 @@ showScreen("AUTO");
 new ResizeObserver(() => { const w = $("#hmiWrap").clientWidth; HMI.style.transform = `scale(${w / 1024})`; }).observe($("#hmiWrap"));
 
 /* ===================================================================== controls */
+$("#selLadderView").onchange = () => { applyLadderView(); lastDiagTrace = ""; };
 $("#btnPause").onclick = () => cmd({ type: "pause", on: !S?.paused });
 $("#btnStep").onclick = () => cmd({ type: "step" });
 $("#selSpeed").onchange = (e) => cmd({ type: "speed", value: e.target.value });
@@ -284,7 +285,7 @@ function axisCard(div, title, a, extra) {
 
 /* ===================================================================== ladder (live IL) */
 const lnEls = [], netEls = [];
-let lastTrace = "", lastFollow = -1;
+let lastTrace = "", lastFollow = -1, lastDiagTrace = "";
 async function buildLadder() {
   PROG = await (await fetch("/api/program")).json();
   const host = $("#ladder"); host.innerHTML = "";
@@ -298,6 +299,27 @@ async function buildLadder() {
     host.appendChild(d); netEls[ni] = d;
   });
   buildNotes(); buildPdo();
+  try { await buildDiagrams(); } catch (e) { console.warn("ladder diagram unavailable", e); $("#selLadderView").value = "list"; applyLadderView(); }
+}
+const diagEls = new Map();      // instruction index -> svg groups
+async function buildDiagrams() {
+  const L = await import("./ladder.js");
+  const host = $("#ladderDiag"); host.innerHTML = "";
+  PROG.networks.forEach((n, ni) => {
+    const d = el("div", "net"); d.appendChild(el("div", "nethead", `<i></i>Network ${n.index} <em>${n.label || ""}</em>`));
+    const sc = el("div", "dscroll"), svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    sc.appendChild(svg); d.appendChild(sc); host.appendChild(d);
+    const ins = PROG.instrs.slice(n.first, n.last).map((x, k) => ({ op: x.op, args: x.args, idx: n.first + k }));
+    const map = L.render(svg, L.layoutNetwork(ins));
+    map.forEach((v, k) => diagEls.set(k, v));
+    diagNets[ni] = d;
+  });
+  applyLadderView();
+}
+const diagNets = [];
+function applyLadderView() {
+  const diag = $("#selLadderView").value === "diagram";
+  $("#ladderDiag").style.display = diag ? "" : "none"; $("#ladder").style.display = diag ? "none" : "";
 }
 function fmtVal(k, v) { return v === undefined ? "" : (k.startsWith("%") && /^%[IQM]\d+\.\d$|^%SM|^%BR/.test(k)) ? (v ? "1" : "0") : String(v); }
 function updateLadder(s) {
@@ -307,8 +329,12 @@ function updateLadder(s) {
     for (let i = 0; i < tr.length; i++) { if (!lastTrace || tr[i] !== lastTrace[i]) { const v = tr.charCodeAt(i) - 48; lnEls[i].classList.toggle("t1", !!(v & 1)); lnEls[i].firstChild.textContent = (v & 2) ? "●" : ""; } }
     lastTrace = tr;
   }
-  s.net_power.split("").forEach((c, i) => netEls[i].classList.toggle("hot", c === "1"));
-  const only = $("#chkActive").checked; netEls.forEach((d, i) => d.classList.toggle("hide", only && s.net_power[i] !== "1"));
+  s.net_power.split("").forEach((c, i) => { netEls[i].classList.toggle("hot", c === "1"); if (diagNets[i]) diagNets[i].classList.toggle("hot", c === "1"); });
+  if ($("#selLadderView").value === "diagram" && s.trace !== lastDiagTrace) {
+    for (let i = 0; i < tr.length; i++) { if (!lastDiagTrace || tr[i] !== lastDiagTrace[i]) { const v = tr.charCodeAt(i) - 48, g = diagEls.get(i); if (g) g.forEach((e) => { e.classList.toggle("on", !!(v & 1)); e.classList.toggle("act", !!(v & 2)); }); } }
+    lastDiagTrace = tr;
+  }
+  const only = $("#chkActive").checked; netEls.forEach((d, i) => { const hide = only && s.net_power[i] !== "1"; d.classList.toggle("hide", hide); if (diagNets[i]) diagNets[i].classList.toggle("hide", hide); });
   // operand values
   PROG.instrs.forEach((ins, i) => {
     const vEl = lnEls[i].lastChild; let t = "";
@@ -319,10 +345,10 @@ function updateLadder(s) {
   const b = s.bits; const flags = ["M31.0", "M31.1", "M31.2", "M31.3", "M31.4", "M31.5", "M31.6", "M31.7", "M32.0"], nets = [21, 22, 23, 24, 25, 26, 27, 28, 31, 34];
   let step = 0; while (step < flags.length && b[flags[step]]) step++;
   let target = b["M30.1"] ? nets[step] : b["M30.2"] ? 35 : b["M40.0"] ? 13 : -1;
-  netEls.forEach((d, i) => d.classList.toggle("focus", PROG.networks[i].index === target));
+  netEls.forEach((d, i) => { const f = PROG.networks[i].index === target; d.classList.toggle("focus", f); if (diagNets[i]) diagNets[i].classList.toggle("focus", f); });
   if ($("#chkFollow").checked && target !== lastFollow && $("#tab-ladder").classList.contains("on")) {
     lastFollow = target; const idx = PROG.networks.findIndex((n) => n.index === target);
-    if (idx >= 0) $("#ladder").scrollTop = netEls[idx].offsetTop - 40;
+    if (idx >= 0) { const diag = $("#selLadderView").value === "diagram" && diagNets[idx]; const box = diag ? $("#ladderDiag") : $("#ladder"); box.scrollTop = (diag ? diagNets[idx] : netEls[idx]).offsetTop - 40; }
   }
 }
 

@@ -76,3 +76,11 @@ table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:Con
 #notes{max-height:440px;overflow:auto;line-height:1.55}#notes h3{margin:10px 0 4px;color:var(--acc)}#notes li{margin:2px 0}
 .as{color:var(--warn)}
 footer{padding:0 12px 14px}#logbox{font:12px Consolas,monospace;color:var(--dim);background:#0c1117;border:1px solid var(--line);border-radius:6px;padding:6px 10px;height:112px;overflow:hidden;white-space:pre}
+
+#ladderDiag{height:420px;overflow:auto;background:#0f161d;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+#ladderDiag .net{overflow:visible}.dscroll{overflow-x:auto;overflow-y:hidden;padding-bottom:4px}
+#ladderDiag svg{display:block;font:11px Consolas,monospace}
+svg .lw,svg .cb{stroke:#4b5967;stroke-width:1.6;fill:none}svg .rail{fill:#4b5967}svg .cb.box{fill:#16212c}svg .cb.fill{fill:#16212c}
+svg .lt{fill:#9fb0c0;stroke:none}svg .lt.in{fill:#c6d3df}
+svg .el.on .lw,svg .el.on .cb{stroke:var(--ok)}svg .el.on .cb.box,svg .el.on .cb.fill{fill:#12301f}svg .el.on .lt{fill:#9fe8be}
+svg .el.act .cb{stroke:var(--warn)}svg .el.act .cb.box,svg .el.act .cb.fill{fill:#3a2d0c}
