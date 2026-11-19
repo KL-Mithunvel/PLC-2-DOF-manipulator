@@ -374,6 +374,7 @@ function buildSources() {
      <tr><td>ghost (shadow) arm</td><td><select id="selGhost"><option>none</option></select></td></tr></table>
      <p style="color:var(--dim)">The translucent cyan arm in the 3D view is the ghost: any second source (live PLC encoders, mocap, a recorded run) drawn over the primary one.</p></div>
    <div><b>Recorder</b><table class="dt">
+     <tr><td>source</td><td><select id="selRecSrc"><option>sim</option></select></td></tr>
      <tr><td id="recState">idle</td><td><button id="btnRec">Record</button></td></tr></table>
      <p style="color:var(--dim)">Logs go to <code>logs/*.jsonl</code> (snapshot schema v1).</p></div>
    <div><b>Replay</b><table class="dt">
@@ -384,7 +385,7 @@ function buildSources() {
   </div>`;
   $("#selSrc").onchange = (e) => { SRC = e.target.value; connect(); };
   $("#selGhost").onchange = (e) => { GHOST = e.target.value; connect(); };
-  $("#btnRec").onclick = () => post({ type: HUB && HUB.recorder.active ? "record_stop" : "record_start" });
+  $("#btnRec").onclick = () => { const src = $("#selRecSrc").value; const r = src === "sim" ? HUB.recorder : (HUB.recorders && HUB.recorders[src]) || { active: false }; post({ type: r.active ? "record_stop" : "record_start", source: src }); };
   $("#btnLoad").onclick = () => { const f = $("#selLog").value; if (f) post({ type: "replay_load", file: f }); };
   $("#btnRPlay").onclick = () => post({ type: "replay_play", on: !(HUB && HUB.replay.playing) });
   $("#selRSpeed").onchange = (e) => post({ type: "replay_speed", value: e.target.value });
@@ -396,8 +397,11 @@ function updateSources(s) {
   const g = $("#selGhost"), want = ["none", ...HUB.sources.filter((x) => x !== SRC)];
   if (g.options.length !== want.length || [...g.options].some((o, i) => o.value !== want[i])) { g.innerHTML = want.map((x) => `<option ${x === GHOST ? "selected" : ""}>${x}</option>`).join(""); }
   const l = $("#selLog"); if (document.activeElement !== l && l.options.length !== HUB.logs.length) l.innerHTML = HUB.logs.map((f) => `<option ${f === HUB.replay.file ? "selected" : ""}>${f}</option>`).join("");
-  $("#recState").textContent = HUB.recorder.active ? `recording ${HUB.recorder.file} (${HUB.recorder.frames} frames)` : "idle";
-  $("#btnRec").textContent = HUB.recorder.active ? "Stop" : "Record";
+  const rs = $("#selRecSrc"), wantRec = ["sim", ...Object.keys(HUB.live)];
+  if (rs.options.length !== wantRec.length) rs.innerHTML = wantRec.map((x) => `<option>${x}</option>`).join("");
+  const rr = rs.value === "sim" ? HUB.recorder : (HUB.recorders && HUB.recorders[rs.value]) || { active: false, frames: 0, file: "" };
+  $("#recState").textContent = rr.active ? `recording ${rr.file} (${rr.frames} frames)` : "idle";
+  $("#btnRec").textContent = rr.active ? "Stop" : "Record";
   const r = HUB.replay; $("#lblSeek").textContent = r.file ? `${r.file}  ${r.pos.toFixed(1)} / ${r.duration.toFixed(1)} s` : "no log loaded";
   if (document.activeElement !== $("#rngSeek") && r.duration) $("#rngSeek").value = Math.round(r.pos / r.duration * 1000);
   $("#liveSrc").innerHTML = Object.keys(HUB.live).length ? Object.entries(HUB.live).map(([k, v]) => `<div><b>${k}</b>: <span class="tag ${v.connected ? "on" : "warn"}">${v.connected ? "connected" : "not connected"}</span> ${v.info || ""}</div>`).join("") : $("#liveSrc").innerHTML;

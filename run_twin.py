@@ -3,6 +3,7 @@
   python run_twin.py [--port 8765] [--no-browser] [--fresh]
   python run_twin.py --modbus-serve 1502            expose the twin's memory as a Modbus TCP server (reads only)
   python run_twin.py --plc 192.168.0.252[:502]      add the REAL PLC as a read-only live source ("plc", shown as the ghost arm)
+  python run_twin.py --mocap 0 --mocap-calib mocap/camera.json   camera tracking of the AprilTags (docs/MOCAP_PLAN.md)
   python run_twin.py --sensors udp:9100             add the motor current/voltage sensor feed (see docs/LIVE_DATA_PLAN.md)
 """
 import argparse
@@ -17,6 +18,8 @@ ap.add_argument("--fresh", action="store_true", help="ignore saved retentive dat
 ap.add_argument("--modbus-serve", type=int, metavar="PORT", help="serve the twin memory over Modbus TCP on this port")
 ap.add_argument("--plc", metavar="HOST[:PORT]", help="read-only live feed from the real PLC")
 ap.add_argument("--plc-hz", type=float, default=10.0)
+ap.add_argument("--mocap", metavar="CAM_INDEX|VIDEO", help="motion capture from a camera index or video file (needs --mocap-calib)")
+ap.add_argument("--mocap-calib", default="mocap/camera.json", help="camera calibration json from python -m mocap.calibrate")
 ap.add_argument("--sensors", metavar="udp:PORT|serial:COMx[@baud]", help="motor current/voltage sensor input")
 a = ap.parse_args()
 
@@ -33,6 +36,11 @@ def setup(hub):
         src = PlcLiveSource(host, int(port or 502), hub.twin.cfg, hz=a.plc_hz).start()
         hub.register("plc", src)
         print(f"Reading PLC {host}:{port or 502} (read-only, {a.plc_hz:g} Hz)")
+    if a.mocap:
+        from mocap.source import MocapSource
+        from mocap.tracker import Camera
+        hub.register("mocap", MocapSource.from_spec(a.mocap, Camera.load(a.mocap_calib), hub.twin.cfg).start())
+        print(f"Motion capture from {a.mocap}")
     if a.sensors:
         try:
             from live.sensors import SensorSource

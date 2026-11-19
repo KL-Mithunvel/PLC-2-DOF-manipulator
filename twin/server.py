@@ -30,7 +30,9 @@ class Hub:
 
     def __init__(self, twin: Twin, log_dir: str = LOG_DIR) -> None:
         self.twin = twin
-        self.recorder = Recorder(log_dir)
+        self.recorder = Recorder(log_dir)                  # records the sim
+        self.extra_rec: dict[str, Recorder] = {}            # one recorder per other source (plc, mocap, sensors ...)
+        self._log_dir = log_dir
         self.replay = ReplaySource(log_dir)
         self.live: dict[str, object] = {}       # name -> object with snapshot()/status()/control()
         self._last_wall = time.perf_counter()
@@ -46,6 +48,11 @@ class Hub:
             self.twin.advance()
             if self.recorder.active:
                 self.recorder.offer(self.twin.snapshot())
+        for name, rec in self.extra_rec.items():
+            if rec.active:
+                snap = self.snapshot(name)
+                if snap:
+                    rec.offer(snap)
         self.replay.advance(dt)
 
     def snapshot(self, name: str) -> dict | None:
@@ -70,6 +77,7 @@ class Hub:
         return {
             "sources": ["sim", "replay"] + sorted(self.live),
             "recorder": {"active": self.recorder.active, "file": os.path.basename(self.recorder.path or ""), "frames": self.recorder.n},
+            "recorders": {k: {"active": r.active, "file": os.path.basename(r.path or ""), "frames": r.n} for k, r in self.extra_rec.items()},
             "replay": {"file": self.replay.file, "playing": self.replay.playing, "speed": self.replay.speed,
                        "pos": self.replay.pos, "duration": self.replay.duration},
             "logs": list_logs(self.recorder.dir),
@@ -78,11 +86,18 @@ class Hub:
 
     def command(self, c: dict) -> dict:
         t = c.get("type", "")
-        if t == "record_start":
-            return {"ok": True, "file": self.recorder.start(c.get("name") or None)}
-        if t == "record_stop":
-            self.recorder.stop()
-            return {"ok": True}
+        if t in ("record_start", "record_stop"):
+            src = c.get("source", "sim")
+            if src == "sim":
+                rec = self.recorder
+            elif src in self.live:
+                rec = self.extra_rec.setdefault(src, Recorder(self._log_dir))
+            else:
+                return {"ok": False, "error": "unknown source"}
+            if t == "record_stop":
+                rec.stop()
+                return {"ok": True}
+            return {"ok": True, "file": rec.start(c.get("name") or None)}
         if t == "replay_load":
             return {"ok": True, "frames": self.replay.load(c["file"])}
         if t == "replay_play":
@@ -215,6 +230,8 @@ def run(host: str = "127.0.0.1", port: int = 8765, persist: bool = True, open_br
     finally:
         stop.set()
         hub.recorder.stop()
+        for r in hub.extra_rec.values():
+            r.stop()
         if persist:
             from .sim import STATE_FILE
             twin.plc.save_retentive(STATE_FILE)

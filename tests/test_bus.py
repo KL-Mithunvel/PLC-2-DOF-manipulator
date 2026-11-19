@@ -77,5 +77,24 @@ class HubHttp(unittest.TestCase):
             hub.recorder.stop()
 
 
+
+class MultiRecorder(unittest.TestCase):
+    def test_record_other_source(self):
+        import time
+        from live.sensors import SensorSource
+        with tempfile.TemporaryDirectory() as d:
+            hub = Hub(Twin(), d)
+            src = SensorSource(lambda stop: iter(()))
+            hub.register("sensors", src)
+            self.assertTrue(hub.command({"type": "record_start", "source": "sensors", "name": "s"})["ok"])
+            src.feed_line("S,1,0,1000,24000")
+            for _ in range(3):
+                hub.step()
+                time.sleep(0.05)
+            hub.command({"type": "record_stop", "source": "sensors"})
+            self.assertIn("s.jsonl", hub.status()["logs"])
+            self.assertFalse(hub.command({"type": "record_start", "source": "nope"})["ok"])
+
+
 if __name__ == "__main__":
     unittest.main()
