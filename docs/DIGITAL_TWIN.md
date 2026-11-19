@@ -37,3 +37,9 @@ cycle time with the real one to calibrate the timer base and speeds.
    - Limit: this reproduces the static/quasi-static Ansys result; it is not a live FEA solve.
 
 Inputs needed: CAD (STEP, or per-body STL/OBJ/GLB) with units and axes; per-body mass properties from CAD with material assignments; Ansys result exports if available (stress/deformation per pose, joint reaction probes).
+
+## Planned: live data sources (stated 2026-11-19)
+Target: digital twin + mocap + live PLC feed + **separate current and voltage sensors on each motor**, all on one data bus (same snapshot shape as `/api/stream`).
+- Live PLC: Modbus TCP (pymodbus) to 192.168.0.252:502, read-only; Kinco coil/register mapping to be verified (see KincoBuilder manual).
+- Motor sensors: independent measurement of each motor's supply current/voltage. Use to calibrate the twin's assumed `kt`, gear efficiency and friction (`twin/config.py`), to compare against drive-reported current (6078, currently mapped for node 1 only: `%VW1022`), and to compute electrical power vs the mechanical load from the twin.
+- Notes: the drives are PWM-fed from the 24 V rail, so measure DC supply current per motor (shunt + fast ADC, e.g. INA226/INA228 or a Hall sensor) and log at kHz-level on a small MCU (ESP32/Arduino/RPi), forwarded to the PC over serial/UDP/MQTT with timestamps. The PLC scan (~ms) is too slow for this. Motors are rated 36 V but fed 24 V (paper section 5.3): the voltage sensor will also settle that open question.
