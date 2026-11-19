@@ -129,6 +129,7 @@ document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
   document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x.id === "tab-" + b.dataset.tab));
   if (b.dataset.tab === "scope") drawScope();
+  if (b.dataset.tab === "struct") drawStruct();
   if (b.dataset.tab === "src") { if (!srcBuilt) buildSources(); }
 });
 
@@ -293,30 +294,49 @@ function updateCan(s) {
 }
 
 /* ===================================================================== scope */
-function drawScope() {
-  const cv = $("#cvScope"); if (!cv.clientWidth) return;
+const SCOPE_PANELS = [
+  { title: "angle (deg)", series: [["base_deg", "#4aa3ff"], ["sh_deg", "#3ddc84"], ["base_ref", "#4aa3ff77", 1], ["sh_ref", "#3ddc8477", 1]] },
+  { title: "motor speed (rpm)", series: [["base_rpm", "#4aa3ff"], ["sh_rpm", "#3ddc84"]] },
+  { title: "output torque (N.m)", series: [["base_nm", "#4aa3ff"], ["sh_nm", "#3ddc84"], ["sh_grav", "#ffb020", 1]] },
+  { title: "motor current (A): solid = twin estimate, dashed = measured sensor", series: [["base_a", "#4aa3ff"], ["sh_a", "#3ddc84"], ["base_a_meas", "#4aa3ff99", 1], ["sh_a_meas", "#3ddc8499", 1]] },
+  { title: "magnet %Q0.7", series: [["mag", "#ff4bd8"]], fixed: [0, 1] }];
+const STRUCT_PANELS = [
+  { title: "reaction bending moment (N.m): solid = base flange (overturning), dashed = shoulder axis.  Ansys Pose A = 30.9", series: [["m_flange", "#4aa3ff"], ["m_shoulder", "#ffb020", 1]], refs: [[30.9, "Pose A", "#ff5252"]] },
+  { title: "equivalent stress (MPa): joint / link-1 / link-2 / base.  Ansys peak 8.81 (joint, Pose A)", series: [["s_joint", "#ff5252"], ["s_link1", "#3ddc84"], ["s_link2", "#4aa3ff"], ["s_base", "#aaaaaa", 1]], refs: [[8.81, "Ansys max", "#ff525299"]] },
+  { title: "minimum factor of safety (capped at 15).  Ansys-reported minimum 4.63 (joint, Pose B)", series: [["fos_min", "#3ddc84"]], refs: [[4.63, "Ansys min", "#ff525299"], [1.5, "typical min 1.5", "#ffb02099"]], fixed: [0, 16] },
+  { title: "link-2 tip deflection (um).  Ansys max 85.2", series: [["defl_um", "#ffb020"]], refs: [[85.2, "Ansys max", "#ff525299"]] }];
+
+function plotPanels(cv, panels, T = 25) {
+  if (!cv.clientWidth) return;
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
   if (cv.width !== W * dpr || cv.height !== H * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
   const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, W, H);
   if (scope.length < 2) return;
-  const T = 25, t1 = scope[scope.length - 1].t, t0 = t1 - T, ml = 62, mr = 10, panels = [
-    { title: "angle (deg)", series: [["base_deg", "#4aa3ff"], ["sh_deg", "#3ddc84"], ["base_ref", "#4aa3ff77", 1], ["sh_ref", "#3ddc8477", 1]] },
-    { title: "motor speed (rpm)", series: [["base_rpm", "#4aa3ff"], ["sh_rpm", "#3ddc84"]] },
-    { title: "output torque (N.m)", series: [["base_nm", "#4aa3ff"], ["sh_nm", "#3ddc84"], ["sh_grav", "#ffb020", 1]] },
-    { title: "motor current (A): solid = twin estimate, dashed = measured sensor", series: [["base_a", "#4aa3ff"], ["sh_a", "#3ddc84"], ["base_a_meas", "#4aa3ff99", 1], ["sh_a_meas", "#3ddc8499", 1]] },
-    { title: "magnet %Q0.7", series: [["mag", "#ff4bd8"]], fixed: [0, 1] }];
-  const ph = (H - 8) / panels.length;
+  const t1 = scope[scope.length - 1].t, t0 = t1 - T, ml = 62, mr = 10;
+  const ph = (H - 8) / panels.length, data = scope.filter((s) => s.t >= t0);
   panels.forEach((p, pi) => {
-    const y0 = 4 + pi * ph + 14, h = ph - 22, data = scope.filter((s) => s.t >= t0);
+    const y0 = 4 + pi * ph + 14, h = ph - 22;
     let lo = Infinity, hi = -Infinity; p.series.forEach(([k]) => data.forEach((s) => { if (s[k] === undefined) return; lo = Math.min(lo, s[k]); hi = Math.max(hi, s[k]); }));
-    if (p.fixed) [lo, hi] = p.fixed; if (hi - lo < 1e-6) { hi += 1; lo -= 1; } const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    if (p.refs) p.refs.forEach(([v]) => { if (isFinite(lo) && v < hi * 4 + 1) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+    if (p.fixed) [lo, hi] = p.fixed; if (!isFinite(lo)) { lo = 0; hi = 1; } if (hi - lo < 1e-6) { hi += 1; lo -= 1; } const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+    const Y = (v) => y0 + h * (1 - (v - lo) / (hi - lo));
     c.fillStyle = "#8394a7"; c.font = "11px Segoe UI"; c.fillText(p.title, ml, y0 - 4);
     c.strokeStyle = "#243140"; c.strokeRect(ml, y0, W - ml - mr, h);
     c.fillText(hi.toFixed(1), 4, y0 + 9); c.fillText(lo.toFixed(1), 4, y0 + h);
-    if (lo < 0 && hi > 0) { const zy = y0 + h * (1 - (0 - lo) / (hi - lo)); c.strokeStyle = "#31404f"; c.beginPath(); c.moveTo(ml, zy); c.lineTo(W - mr, zy); c.stroke(); }
+    if (lo < 0 && hi > 0) { const zy = Y(0); c.strokeStyle = "#31404f"; c.beginPath(); c.moveTo(ml, zy); c.lineTo(W - mr, zy); c.stroke(); }
+    (p.refs || []).forEach(([v, name, col]) => { if (v < lo || v > hi) return; c.strokeStyle = col; c.setLineDash([2, 4]); c.beginPath(); c.moveTo(ml, Y(v)); c.lineTo(W - mr, Y(v)); c.stroke(); c.setLineDash([]); c.fillStyle = col; c.fillText(name, W - mr - 6 - name.length * 5.5, Y(v) - 3); });
     p.series.forEach(([k, col, dash]) => { c.strokeStyle = col; c.lineWidth = dash ? 1 : 1.6; c.setLineDash(dash ? [4, 3] : []); c.beginPath();
-      let pen = false; data.forEach((s) => { if (s[k] === undefined) return; const x = ml + (s.t - t0) / T * (W - ml - mr), y = y0 + h * (1 - (s[k] - lo) / (hi - lo)); pen ? c.lineTo(x, y) : c.moveTo(x, y); pen = true; }); c.stroke(); c.setLineDash([]); });
+      let pen = false; data.forEach((s) => { if (s[k] === undefined) return; const x = ml + (s.t - t0) / T * (W - ml - mr), y = Y(s[k]); pen ? c.lineTo(x, y) : c.moveTo(x, y); pen = true; }); c.stroke(); c.setLineDash([]); });
   });
+}
+function drawScope() { plotPanels($("#cvScope"), SCOPE_PANELS); }
+function drawStruct() { plotPanels($("#cvStruct"), STRUCT_PANELS); }
+function updateStructCards(s) {
+  const st = s.structural; if (!st) return;
+  const rows = Object.entries(st.bodies).map(([k, b]) => `<tr><td>${k}</td><td class="n">${b.stress_mpa.toFixed(2)} MPa</td><td class="n">${b.defl_um.toFixed(1)} um</td><td class="n">${b.fos >= 15 ? "&ge;15" : b.fos.toFixed(1)}</td>
+    <td style="width:160px"><div class="bar"><i style="width:${Math.min(100, b.stress_mpa / b.yield_mpa * 100 * 8)}%"></i></div></td></tr>`).join("");
+  $("#structCards").innerHTML = `<table class="dt"><tr><th>body</th><th>stress</th><th>max deflection</th><th>FOS</th><th>stress vs yield (x8)</th></tr>${rows}</table>
+   <div style="margin-top:6px;color:var(--dim)">flange moment <b>${st.moment_flange.toFixed(1)}</b> N&middot;m (Pose A ref ${st.ref_moment.flange.toFixed(1)}) &middot; axial ${st.axial_n.toFixed(0)} N &middot; min FOS <b>${st.min_fos.toFixed(1)}</b> (${st.min_fos_body || "-"})</div>`;
 }
 
 /* ===================================================================== notes */
@@ -417,13 +437,17 @@ function render() {
     if (frame % 4 === 0) updateLadder(s);
     if (frame % 6 === 0) { if ($("#tab-mem").classList.contains("on")) updateMem(s); if ($("#tab-can").classList.contains("on")) updateCan(s); }
     if (frame % 6 === 0 && $("#tab-scope").classList.contains("on")) drawScope();
+    if (frame % 6 === 0 && $("#tab-struct").classList.contains("on")) { drawStruct(); updateStructCards(s); }
   }
   if (S && frame % 10 === 0 && $("#tab-src").classList.contains("on")) updateSources(S);
   requestAnimationFrame(render);
 }
 let ES = null, SRC = "sim", GHOST = "none", HUB = null;
 function connect() {
-  if (location.search.includes("snap")) { fetch("/api/state").then((r) => r.json()).then((s) => { s.watch = {}; S = window.__lastSnap = s; for (let i = 0; i < 8; i++) scope.push(s.sample || { t: i, base_deg: 0, sh_deg: 0, base_ref: 0, sh_ref: 0, base_rpm: 0, sh_rpm: 0, base_nm: 0, sh_nm: 0, sh_grav: 0, mag: 0 }); }); return; }
+  if (location.search.includes("snap")) {
+    Promise.all([fetch("/api/state").then((r) => r.json()), fetch("/api/scope").then((r) => r.json())]).then(([s, sc]) => { s.watch = {}; S = window.__lastSnap = s; sc.forEach((x) => scope.push(x)); const m = /tab=(\w+)/.exec(location.search); if (m) document.querySelector(`#tabs button[data-tab=${m[1]}]`).click(); });
+    return;
+  }
   if (ES) ES.close();
   const es = ES = new EventSource(`/api/stream?source=${SRC}&ghost=${GHOST}`);
   es.onmessage = (e) => {

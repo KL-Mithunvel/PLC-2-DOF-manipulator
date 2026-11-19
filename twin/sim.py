@@ -131,7 +131,16 @@ class Twin:
             "sh_grav": round(a.shoulder.t_ext, 2),
             "base_a": round(a.base.current_ma / 1000, 3), "sh_a": round(a.shoulder.current_ma / 1000, 3),
             "mag": int(m.read("Q0.7")),
+            **self._struct_sample(),
         })
+
+    def _struct_sample(self) -> dict:
+        st = self.arm.structural_state()
+        b = st["bodies"]
+        return {"m_flange": round(st["moment_flange"], 2), "m_shoulder": round(st["moment_shoulder"], 2),
+                "s_joint": round(b["joint"]["stress_mpa"], 3), "s_link1": round(b["link1"]["stress_mpa"], 3),
+                "s_link2": round(b["link2"]["stress_mpa"], 3), "s_base": round(b["base"]["stress_mpa"], 3),
+                "fos_min": round(st["min_fos"], 2), "defl_um": round(st["tip_defl_um"], 2)}
 
     def _edge_log(self) -> None:
         m = self.plc.mem
@@ -283,6 +292,7 @@ class Twin:
                                 self.cfg.shoulder.count_to_angle(m.read(f"VD{2400 + 4 * i}")))[2] for i in range(5)],
                 "pdo": [int(m.read(addr)) for (_n, _d, _c, _o, addr, _b) in PDO_MAP],
                 "cycle_reg": self.plc.cycle_addr,
+                "structural": a.structural_state(),
                 "geo_cfg": {"reach": a.a.reach, "h": a.a.shoulder_height, "drop": a.a.drop_link,
                             "part_r": a.a.part_radius, "part_h": a.a.part_height},
             }

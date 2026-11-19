@@ -58,6 +58,8 @@ class ArmCfg:
     part_height: float = 0.05      # [assumed] m
     magnet_range: float = 0.05     # [assumed] m, capture distance of the electromagnet
     feeder: bool = True            # re-supply a part at the pick point after each cycle
+    use_rigid_body: bool = False   # True: dynamics from twin/bodies.py (CAD mass properties) instead of the simple formulas
+    cad_mass_file: str = ""        # path to cad_mass_properties.json (default: repo root, auto-enables rigid body)
 
 
 @dataclass

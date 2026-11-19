@@ -127,6 +127,9 @@ def make_handler(hub: Hub):
                 return self._json(hub.snapshot(q.get("source", "sim")) or {})
             if path == "/api/program":
                 return self._json(twin.program_info())
+            if path == "/api/scope":
+                with twin.lock:
+                    return self._json(list(twin.scope))
             if path == "/api/sources":
                 return self._json(hub.status())
             if path == "/api/watch":

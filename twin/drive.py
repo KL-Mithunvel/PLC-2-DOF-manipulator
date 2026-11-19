@@ -40,6 +40,7 @@ class Axis:
         self.saturated = False
         self.target_angle = theta0
         self.overload_s = 0.0
+        self.alpha = 0.0           # output angular acceleration, rad/s^2 (for the rigid-body model)
 
     # --- CANopen objects -------------------------------------------------
     @property
@@ -73,6 +74,7 @@ class Axis:
         self.enabled = (cmd.controlword & 0x0F) == 0x0F
         if not self.enabled:                       # brake engaged, no torque
             self.omega = 0.0
+            self.alpha = 0.0
             self.ref, self.ref_v, self.integ, self.tau = self.theta, 0.0, 0.0, 0.0
             self.running = self.at_target = self.saturated = False
             return
@@ -117,6 +119,7 @@ class Axis:
         # plant
         fric = c.friction_v * self.omega + c.friction_c * math.tanh(self.omega / 0.01)
         alpha = (tau + t_grav - fric) / j
+        self.alpha = alpha
         self.omega += alpha * dt
         self.theta += self.omega * dt
         lo, hi = math.radians(c.angle_min_deg), math.radians(c.angle_max_deg)
