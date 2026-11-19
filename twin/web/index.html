@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>2-DOF Arm Digital Twin - PLC + HMI + Arm</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<header>
+  <h1>2-DOF Arm <span>Digital Twin</span></h1>
+  <div class="chips">
+    <span id="chipCan" class="chip">CANopen</span>
+    <span id="chipScan" class="chip">scan</span>
+    <span id="chipTime" class="chip">t = 0.0 s</span>
+    <span id="chipCycle" class="chip">cycle 0.0 s</span>
+  </div>
+  <div class="ctl">
+    <button id="btnPause">Pause</button>
+    <button id="btnStep" title="one PLC scan">Step</button>
+    <label>speed <select id="selSpeed"><option>0.5</option><option selected>1</option><option>2</option><option>5</option><option>10</option></select>x</label>
+    <label>payload <input id="rngPayload" type="range" min="0" max="10" step="0.5" value="5"> <b id="lblPayload">5.0 kg</b></label>
+    <label><input id="chkFeeder" type="checkbox" checked> auto-feed part</label>
+    <button id="btnSpawn">Add part</button>
+    <button id="btnSave" title="save taught points & speeds (retentive data)">Save taught data</button>
+    <button id="btnDefaults">Default points</button>
+  </div>
+</header>
+
+<main>
+  <section id="colLeft">
+    <div class="card">
+      <div class="cardhead">HMI &nbsp;<small>Kinco M2070HE-WIFI, 1024x600 &middot; Modbus TCP to PLC 192.168.0.252:502</small></div>
+      <div id="hmiWrap"><div id="hmi"></div></div>
+    </div>
+    <div class="card" id="panelCard">
+      <div class="cardhead">Operator panel &amp; PLC I/O</div>
+      <div id="panel">
+        <button id="btnEstop" class="estop" title="NC contact on %I0.0">E-STOP</button>
+        <button id="btnReset" class="rst" title="%I0.1: reset / homing input">RESET<br><small>%I0.1</small></button>
+        <button id="btnPower" class="pwr">POWER<br><small>ON</small></button>
+        <div class="leds">
+          <div class="led" id="ledI00"><i></i>%I0.0 enable</div>
+          <div class="led" id="ledI01"><i></i>%I0.1 reset</div>
+          <div class="led mag" id="ledQ07"><i></i>%Q0.7 magnet</div>
+          <div class="led" id="ledM301"><i></i>%M30.1 auto</div>
+          <div class="led" id="ledM400"><i></i>%M40.0 homing</div>
+          <div class="led" id="ledM500"><i></i>%M50.0 shoulder home</div>
+          <div class="led" id="ledM501"><i></i>%M50.1 base home</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="colRight">
+    <div class="card">
+      <div class="cardhead">Digital arm <small>drag = orbit &middot; wheel = zoom &middot; three.js, same <code>/api/stream</code> feed &middot; joint colour = load vs rating</small></div>
+      <div id="viewWrap">
+        <canvas id="cvIso"></canvas>
+        <div id="smallViews"><canvas id="cvTop"></canvas><canvas id="cvSide"></canvas></div>
+        <div id="viewInfo"></div>
+      </div>
+    </div>
+    <div class="axes">
+      <div class="card axis" id="axBase"></div>
+      <div class="card axis" id="axSh"></div>
+    </div>
+  </section>
+</main>
+
+<section class="card" id="bottom">
+  <nav id="tabs">
+    <button data-tab="ladder" class="on">Ladder program (live)</button>
+    <button data-tab="mem">I/O &amp; memory</button>
+    <button data-tab="can">CANopen / PDO</button>
+    <button data-tab="scope">Scope</button>
+    <button data-tab="notes">Model &amp; findings</button>
+  </nav>
+  <div id="tab-ladder" class="tab on">
+    <div class="tabbar">
+      <label><input type="checkbox" id="chkActive"> only energised networks</label>
+      <label><input type="checkbox" id="chkFollow" checked> follow auto sequence</label>
+      <span class="legend"><b class="t1">&#9632;</b> power flows &nbsp; <b class="t0">&#9632;</b> off &nbsp; <b class="act">&#9679;</b> instruction executed this scan</span>
+    </div>
+    <div id="ladder"></div>
+  </div>
+  <div id="tab-mem" class="tab"><div id="memView"></div></div>
+  <div id="tab-can" class="tab"><div id="canView"></div></div>
+  <div id="tab-scope" class="tab"><canvas id="cvScope"></canvas></div>
+  <div id="tab-notes" class="tab"><div id="notes"></div></div>
+</section>
+<footer><div id="logbox"></div></footer>
+<script src="app.js"></script>
+<script type="module" src="view3d.js"></script>
+</body>
+</html>
