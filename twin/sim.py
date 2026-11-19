@@ -247,6 +247,7 @@ class Twin:
             cyc_s = vm.counters.get(4).count if vm.counters.get(4) else 0
             cyc_m = vm.counters.get(3).count if vm.counters.get(3) else 0
             return {
+                "schema": 1, "source": "sim", "wall": time.time(),
                 "t": self.t, "powered": self.powered, "paused": self.paused, "speed": self.speed,
                 "can_online": p.can_online, "can_boot": min(1.0, self.can_t / self.cfg.can_boot_delay_s),
                 "scan_count": vm.scan_count, "scan_ms": self.cfg.scan_ms,

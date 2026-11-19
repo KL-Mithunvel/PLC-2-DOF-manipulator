@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import { buildArm } from "./arm3d.js";
+import { buildGhost } from "./ghost3d.js";
 
 function label(text, color) {
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64;
@@ -17,6 +18,7 @@ const canvas = document.getElementById("cvIso");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.shadowMap.enabled = true; renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 const arm = buildArm(THREE, { label });
+const ghost = buildGhost(THREE, arm.scene);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 20);
 camera.up.set(0, 0, 1); camera.position.set(0.85, -0.95, 0.6);
 const controls = new OrbitControls(camera, canvas);
@@ -24,5 +26,5 @@ controls.target.set(...arm.target); controls.enableDamping = true; controls.maxP
 controls.update();
 let snap = null;
 new ResizeObserver(() => { const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }).observe(canvas);
-(function loop() { requestAnimationFrame(loop); arm.update(window.__lastSnap || snap); controls.update(); renderer.render(arm.scene, camera); })();
+(function loop() { requestAnimationFrame(loop); const cur = window.__lastSnap || snap; if (cur && cur.geom) arm.update(cur); ghost.update(cur && cur.ghost); controls.update(); renderer.render(arm.scene, camera); })();
 window.Arm3D = { update: (s) => { snap = s; } };

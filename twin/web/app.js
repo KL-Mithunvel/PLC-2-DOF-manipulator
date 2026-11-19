@@ -129,6 +129,7 @@ document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
   document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x.id === "tab-" + b.dataset.tab));
   if (b.dataset.tab === "scope") drawScope();
+  if (b.dataset.tab === "src") { if (!srcBuilt) buildSources(); }
 });
 
 /* ===================================================================== arm renderer */
@@ -339,11 +340,53 @@ function buildNotes() {
    <li>HMI button actions (momentary START/STOP/RESET/jog; maintained magnet switch) &mdash; the DTools tag addresses were not readable.</li></ul>`;
 }
 
+
+/* ===================================================================== data sources tab */
+let srcBuilt = false;
+const post = (o) => cmd(o);
+function buildSources() {
+  const host = $("#srcView"); srcBuilt = true;
+  host.innerHTML = `
+  <div class="memgrid">
+   <div><b>View</b><table class="dt">
+     <tr><td>primary source</td><td><select id="selSrc"><option>sim</option><option>replay</option></select></td></tr>
+     <tr><td>ghost (shadow) arm</td><td><select id="selGhost"><option>none</option></select></td></tr></table>
+     <p style="color:var(--dim)">The translucent cyan arm in the 3D view is the ghost: any second source (live PLC encoders, mocap, a recorded run) drawn over the primary one.</p></div>
+   <div><b>Recorder</b><table class="dt">
+     <tr><td id="recState">idle</td><td><button id="btnRec">Record</button></td></tr></table>
+     <p style="color:var(--dim)">Logs go to <code>logs/*.jsonl</code> (snapshot schema v1).</p></div>
+   <div><b>Replay</b><table class="dt">
+     <tr><td>log</td><td><select id="selLog"></select> <button id="btnLoad">Load</button></td></tr>
+     <tr><td>transport</td><td><button id="btnRPlay">Play/Pause</button> <select id="selRSpeed"><option>0.25</option><option selected>1</option><option>2</option><option>5</option></select>x</td></tr>
+     <tr><td>position</td><td><input id="rngSeek" type="range" min="0" max="1000" value="0" style="width:200px"> <span id="lblSeek"></span></td></tr></table></div>
+   <div><b>Live sources</b><div id="liveSrc" style="color:var(--dim)">none registered. Start with <code>run_twin.py --plc HOST</code> / <code>--sensors</code> / <code>--mocap</code>.</div></div>
+  </div>`;
+  $("#selSrc").onchange = (e) => { SRC = e.target.value; connect(); };
+  $("#selGhost").onchange = (e) => { GHOST = e.target.value; connect(); };
+  $("#btnRec").onclick = () => post({ type: HUB && HUB.recorder.active ? "record_stop" : "record_start" });
+  $("#btnLoad").onclick = () => { const f = $("#selLog").value; if (f) post({ type: "replay_load", file: f }); };
+  $("#btnRPlay").onclick = () => post({ type: "replay_play", on: !(HUB && HUB.replay.playing) });
+  $("#selRSpeed").onchange = (e) => post({ type: "replay_speed", value: e.target.value });
+  $("#rngSeek").oninput = (e) => post({ type: "replay_seek", frac: e.target.value / 1000 });
+}
+function updateSources(s) {
+  if (!srcBuilt) buildSources();
+  if (!HUB) return;
+  const g = $("#selGhost"), want = ["none", ...HUB.sources.filter((x) => x !== SRC)];
+  if (g.options.length !== want.length || [...g.options].some((o, i) => o.value !== want[i])) { g.innerHTML = want.map((x) => `<option ${x === GHOST ? "selected" : ""}>${x}</option>`).join(""); }
+  const l = $("#selLog"); if (document.activeElement !== l && l.options.length !== HUB.logs.length) l.innerHTML = HUB.logs.map((f) => `<option ${f === HUB.replay.file ? "selected" : ""}>${f}</option>`).join("");
+  $("#recState").textContent = HUB.recorder.active ? `recording ${HUB.recorder.file} (${HUB.recorder.frames} frames)` : "idle";
+  $("#btnRec").textContent = HUB.recorder.active ? "Stop" : "Record";
+  const r = HUB.replay; $("#lblSeek").textContent = r.file ? `${r.file}  ${r.pos.toFixed(1)} / ${r.duration.toFixed(1)} s` : "no log loaded";
+  if (document.activeElement !== $("#rngSeek") && r.duration) $("#rngSeek").value = Math.round(r.pos / r.duration * 1000);
+  $("#liveSrc").innerHTML = Object.keys(HUB.live).length ? Object.entries(HUB.live).map(([k, v]) => `<div><b>${k}</b>: <span class="tag ${v.connected ? "on" : "warn"}">${v.connected ? "connected" : "not connected"}</span> ${v.info || ""}</div>`).join("") : $("#liveSrc").innerHTML;
+}
+
 /* ===================================================================== main loop */
 let frame = 0;
 function render() {
   frame++;
-  if (S) {
+  if (S && S.bits && S.load) {
     const s = S;
     $("#chipCan").textContent = s.powered ? (s.can_online ? "CANopen OK" : `CANopen starting ${Math.round(s.can_boot * 100)}%`) : "POWER OFF";
     $("#chipCan").className = "chip " + (!s.powered ? "bad" : s.can_online ? "ok" : "warn");
@@ -363,24 +406,27 @@ function render() {
     if (frame % 3 === 0) {
       axisCard($("#axBase"), "Base motor &mdash; node 1 &middot; M8025 101:1", s.base, `<tr><td>inertia J</td><td>${ld.j_base.toFixed(2)} kg&middot;m&sup2;</td></tr>`);
       axisCard($("#axSh"), "Shoulder motor &mdash; node 2 &middot; M8010 81:1", s.shoulder, `<tr><td>gravity torque</td><td>${ld.t_grav.toFixed(1)} N&middot;m</td></tr>`);
-      $("#logbox").textContent = s.log.slice().reverse().join("\n");
+      $("#logbox").textContent = (s.log || []).slice().reverse().join("\n");
     }
     if (frame % 4 === 0) updateLadder(s);
     if (frame % 6 === 0) { if ($("#tab-mem").classList.contains("on")) updateMem(s); if ($("#tab-can").classList.contains("on")) updateCan(s); }
     if (frame % 6 === 0 && $("#tab-scope").classList.contains("on")) drawScope();
   }
+  if (S && frame % 10 === 0 && $("#tab-src").classList.contains("on")) updateSources(S);
   requestAnimationFrame(render);
 }
+let ES = null, SRC = "sim", GHOST = "none", HUB = null;
 function connect() {
   if (location.search.includes("snap")) { fetch("/api/state").then((r) => r.json()).then((s) => { s.watch = {}; S = window.__lastSnap = s; for (let i = 0; i < 8; i++) scope.push(s.sample || { t: i, base_deg: 0, sh_deg: 0, base_ref: 0, sh_ref: 0, base_rpm: 0, sh_rpm: 0, base_nm: 0, sh_nm: 0, sh_grav: 0, mag: 0 }); }); return; }
-  const es = new EventSource("/api/stream");
+  if (ES) ES.close();
+  const es = ES = new EventSource(`/api/stream?source=${SRC}&ghost=${GHOST}`);
   es.onmessage = (e) => {
-    const s = JSON.parse(e.data); S = window.__lastSnap = s; if (s.watch) WATCH = s.watch;
+    const s = JSON.parse(e.data); if (s.empty) return; S = window.__lastSnap = s; if (s.watch) WATCH = s.watch; if (s.hub) HUB = s.hub;
+    if (!s.geom) return;
     if (s.sample && (!scope.length || scope[scope.length - 1].t !== s.sample.t)) { scope.push(s.sample); if (scope.length > 800) scope.shift(); }
     const tp = s.geom.tip; if (!trail.length || Math.hypot(tp[0] - trail[trail.length - 1][0], tp[1] - trail[trail.length - 1][1], tp[2] - trail[trail.length - 1][2]) > 0.006) { trail.push(tp.slice()); if (trail.length > 260) trail.shift(); }
-    $("#rngPayload").value !== String(s.cfg_payload) && document.activeElement !== $("#rngPayload") && ($("#rngPayload").value = s.cfg_payload, $("#lblPayload").textContent = s.cfg_payload.toFixed(1) + " kg");
-    if (s.hmi.screen !== curScreen && false) showScreen(s.hmi.screen);
+    if (s.cfg_payload !== undefined) $("#rngPayload").value !== String(s.cfg_payload) && document.activeElement !== $("#rngPayload") && ($("#rngPayload").value = s.cfg_payload, $("#lblPayload").textContent = s.cfg_payload.toFixed(1) + " kg");
   };
-  es.onerror = () => { es.close(); setTimeout(connect, 1000); };
+  es.onerror = () => { if (ES === es) { es.close(); setTimeout(connect, 1000); } };
 }
 buildLadder().then(() => { connect(); requestAnimationFrame(render); });
