@@ -1,7 +1,8 @@
 /* Three.js model of the 2-DOF arm. Pure scene construction + update(snapshot): no renderer, no DOM,
    so it can be unit-tested in node.  World frame = the simulator's frame: metres, z up,
    base yaw about z, shoulder pitch measured from vertical-up (theta = 0 is home).            */
-export function buildArm(THREE, { label }) {
+export function buildArm(THREE, opts) {
+  const { label } = opts;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x121a23);
   scene.fog = new THREE.Fog(0x121a23, 2.5, 6);
@@ -88,5 +89,28 @@ export function buildArm(THREE, { label }) {
     cross.position.z = cfg.reach - 0.01; pin.position.z = cfg.reach;
     link2.scale.z = cfg.drop / 0.12; link2.position.z = -cfg.drop / 2; magnet.position.z = -cfg.drop - 0.0175; glow.position.z = -cfg.drop - 0.05;
   }
-  return { scene, update, target: [0.15, 0.12, 0.2] };
+  // ---- CAD models: GLB bodies exported in the HOME pose (yaw 0, pitch 0), world axes, metres (see tools/import_cad.py) ----
+  const prim = { base: [base, pedestal], joint: [housing], link1: [...link.children], link2: [link2] };
+  const attached = {};
+  function attachBodies(models) {
+    for (const [name, obj] of Object.entries(models)) {
+      if (name === "part") continue;
+      obj.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+      const frame = (opts && opts.frames && opts.frames[name]) || { base: "static", joint: "yaw", link1: "link", link2: "drop" }[name] || "yaw";
+      if (frame === "static") scene.add(obj);
+      else if (frame === "yaw") yaw.add(obj);
+      else if (frame === "link") { obj.position.z = -cfg.h; link.add(obj); }
+      else if (frame === "drop") { obj.position.z = -(cfg.h + cfg.reach); drop.add(obj); }
+      (prim[name] || []).forEach((m) => { m.visible = false; });
+      attached[name] = obj;
+    }
+    if (models.part) {
+      let geo = null;
+      models.part.traverse((o) => { if (o.isMesh && !geo) geo = o.geometry.clone(); });
+      const c = (opts && opts.partCenter) || [0, 0, 0];
+      if (geo) { geo.translate(-c[0], -c[1], -c[2]); partMesh.geometry = geo; placedMesh.geometry = geo; }
+    }
+    return Object.keys(attached);
+  }
+  return { scene, update, attachBodies, opts, target: [0.15, 0.12, 0.2] };
 }

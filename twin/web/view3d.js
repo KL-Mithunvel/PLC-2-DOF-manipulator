@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "./vendor/OrbitControls.js";
 import { buildArm } from "./arm3d.js";
 import { buildGhost } from "./ghost3d.js";
+import { GLTFLoader } from "./vendor/loaders/GLTFLoader.js";
 
 function label(text, color) {
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 64;
@@ -25,6 +26,20 @@ const controls = new OrbitControls(camera, canvas);
 controls.target.set(...arm.target); controls.enableDamping = true; controls.maxPolarAngle = Math.PI * 0.49; controls.minDistance = 0.5; controls.maxDistance = 4;
 controls.update();
 let snap = null;
+// optional CAD models (twin/web/models/manifest.json written by tools/import_cad.py)
+(async () => {
+  try {
+    const r = await fetch("models/manifest.json", { cache: "no-store" });
+    if (!r.ok) return;
+    const man = await r.json(), loader = new GLTFLoader(), models = {}, frames = {}; let partCenter;
+    for (const [name, info] of Object.entries(man.bodies)) {
+      const g = await loader.loadAsync("models/" + info.file); models[name] = g.scene; frames[name] = info.frame === "yaw" && name === "base" ? "static" : info.frame;
+      if (name === "part") partCenter = info.center;
+    }
+    arm.opts.frames = frames; arm.opts.partCenter = partCenter;
+    console.log("CAD bodies attached:", arm.attachBodies(models));
+  } catch (e) { console.warn("no CAD models:", e); }
+})();
 new ResizeObserver(() => { const w = canvas.clientWidth, h = canvas.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }).observe(canvas);
 (function loop() { requestAnimationFrame(loop); const cur = window.__lastSnap || snap; if (cur && cur.geom) arm.update(cur); ghost.update(cur && cur.ghost); controls.update(); renderer.render(arm.scene, camera); })();
 window.Arm3D = { update: (s) => { snap = s; } };

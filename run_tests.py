@@ -9,7 +9,7 @@ ok = unittest.TextTestRunner(verbosity=1).run(suite).wasSuccessful()
 if shutil.which("node"):
     for f in ("tests/test_arm3d.mjs",):
         print("node", f)
-        ok &= subprocess.run(["node", f]).returncode == 0
+        ok &= subprocess.run(["node", "--import", "./tests/node_register.mjs", f]).returncode == 0
 else:
     print("node not found: skipping JavaScript tests")
 sys.exit(0 if ok else 1)
