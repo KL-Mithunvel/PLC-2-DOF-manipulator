@@ -3,7 +3,7 @@
 * The client wrapper exposes read functions ONLY. There is no code path that writes to the PLC.
 * Polls a fixed plan of memory blocks, mirrors them into a ``twin.il.Memory`` and publishes a pose snapshot
   (source name ``plc``) from the mirrored encoder counts (%MD600 base, %VD1044 shoulder).
-* The Kinco address mapping lives in ``live/modbus_map.py`` and is UNVERIFIED (see there).
+* The Kinco address mapping lives in ``live/modbus_map.py`` (from the Kinco K-series manual, not yet verified on hardware).
 """
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from twin.config import TwinCfg
 from twin.il import Memory
 from twin.sources import pose_snapshot
 
-from .modbus_map import ModbusMap
+from .modbus_map import MAX_BITS_PER_READ, MAX_WORDS_PER_READ, ModbusMap
 
-# (kind, area, first byte, number of bytes)
+# (kind, area, first byte, number of bytes); kind = discrete | coil | word (holding registers, V area) | wordbits (word data of a bit-only area)
 DEFAULT_PLAN = [
     ("discrete", "I", 0, 2),
     ("coil", "Q", 0, 2),
@@ -26,7 +26,7 @@ DEFAULT_PLAN = [
     ("word", "V", 2000, 42),
     ("word", "V", 2300, 128),
     ("word", "V", 2490, 40),
-    ("word", "M", 600, 8),
+    ("wordbits", "M", 600, 8),          # %MD600 (base position): the M area is bit-only on the PLC, read as 64 coils
 ]
 
 
@@ -126,17 +126,18 @@ class PlcLiveSource:
             if kind == "word":
                 first = m.word(area, byte0)
                 nwords = nbytes // 2
-                for off in range(0, nwords, 120):
-                    n = min(120, nwords - off)
+                for off in range(0, nwords, MAX_WORDS_PER_READ):
+                    n = min(MAX_WORDS_PER_READ, nwords - off)
                     regs = c.read_words(first + off, n)
                     for i, r in enumerate(regs):
                         self.mem.set(area, 2, byte0 + (off + i) * 2, r)
             else:
                 nbits = nbytes * 8
-                k, first = m.bit(area, byte0, 0)
-                for off in range(0, nbits, 1000):
-                    n = min(1000, nbits - off)
-                    bits = c.read_bits(kind, first + off, n)
+                k, first = m.bit(area, byte0, 0) if kind != "wordbits" else m.word_via_bits(area, byte0)
+                rk = "coil" if kind in ("wordbits", "coil") else k
+                for off in range(0, nbits, MAX_BITS_PER_READ):
+                    n = min(MAX_BITS_PER_READ, nbits - off)
+                    bits = c.read_bits(rk, first + off, n)
                     for i, b in enumerate(bits):
                         idx = off + i
                         self.mem.set_bit(area, byte0 + idx // 8, idx % 8, b)

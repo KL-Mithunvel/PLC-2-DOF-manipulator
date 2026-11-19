@@ -17,7 +17,7 @@ from twin.il import parse_operand
 from .modbus_map import ModbusMap
 
 
-def read_all_words(read_words, limit: int = 65536, chunk: int = 120) -> dict[int, int]:
+def read_all_words(read_words, limit: int = 65536, chunk: int = 100) -> dict[int, int]:
     regs: dict[int, int] = {}
     for a in range(0, limit, chunk):
         try:

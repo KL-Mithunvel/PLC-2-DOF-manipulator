@@ -27,8 +27,8 @@ class LiveReader(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.twin = running_twin()
-        cls.map = ModbusMap(coil_base={"Q": 300, "M": 2000}, discrete_base={"I": 50},
-                            holding_base={"V": 100, "M": 9000})        # deliberately not the defaults
+        cls.map = ModbusMap(coil_base={"Q": 300, "M": 2000}, discrete_base={"I": 50, "M": 2000},
+                            holding_base={"V": 700})        # deliberately not the defaults
         cls.srv = TwinModbusServer(cls.twin, cls.map, port=0).start()
 
     @classmethod
@@ -58,7 +58,7 @@ class LiveReader(unittest.TestCase):
         c = ReadOnlyClient("127.0.0.1", self.srv.port)
         self.assertFalse(any(hasattr(c, n) for n in ("write_register", "write_coil", "write_words", "write_bits")))
         c.connect()
-        rr = c._c.write_register(100 + 1010, 1, **c._kw())             # raw client, bypassing the wrapper
+        rr = c._c.write_register(700 + 1010, 1, **c._kw())             # raw client, bypassing the wrapper
         self.assertTrue(rr.isError())
         self.assertNotEqual(self.twin.plc.mem.read("VD2020"), 1)
         c.close()
@@ -66,11 +66,11 @@ class LiveReader(unittest.TestCase):
     def test_scan_finds_offsets(self):
         c = ReadOnlyClient("127.0.0.1", self.srv.port)
         c.connect()
-        regs = read_all_words(c.read_words, limit=12000)
+        regs = read_all_words(c.read_words, limit=6000)
         mem = self.twin.plc.mem
         known = {k: mem.read(k) for k in ("VD2020", "VW2036", "VD2300", "VD1044")}
         votes = find_offsets(regs, known)
-        self.assertEqual(votes["V"].most_common(1)[0][0], 100)
+        self.assertEqual(votes["V"].most_common(1)[0][0], 700)
         c.close()
 
     def test_unreachable_plc_reports_error_without_crashing(self):
@@ -105,3 +105,36 @@ class HubIntegration(unittest.TestCase):
             src.stop()
         srv.shutdown()
         srv.server_close()
+
+
+class ManualMapping(unittest.TestCase):
+    """Default mapping = Kinco K-series manual 10.2.2.3 (page 483)."""
+
+    def test_default_addresses_match_manual(self):
+        m = ModbusMap()
+        self.assertEqual(m.bit("I", 0, 0), ("discrete", 0))
+        self.assertEqual(m.bit("Q", 0, 7), ("coil", 7))              # %Q0.7 electromagnet
+        self.assertEqual(m.bit("M", 0, 0), ("coil", 320))            # M0.0 -> 320
+        self.assertEqual(m.bit("M", 1023, 7), ("coil", 8511))        # M1023.7 -> 8511
+        self.assertEqual(m.word("V", 0), 100)                        # VW0 -> 100
+        self.assertEqual(m.word("V", 2), 101)                        # VW2 -> 101
+        self.assertEqual(m.word("V", 1044), 622)                     # %VD1044 shoulder position
+        self.assertEqual(m.word_via_bits("M", 600), ("coil", 320 + 600 * 8))   # %MD600 base position, bit-only area
+        with self.assertRaises(KeyError):
+            m.word("M", 600)
+
+    def test_reader_gets_md600_through_coils_with_default_map(self):
+        twin = running_twin()
+        srv = TwinModbusServer(twin, ModbusMap(), port=0).start()
+        try:
+            src = PlcLiveSource("127.0.0.1", srv.port, mapping=ModbusMap(),
+                                client_factory=lambda: ReadOnlyClient("127.0.0.1", srv.port))
+            src._client = src._factory()
+            src._client.connect()
+            src.poll_once()
+            self.assertEqual(src.mem.read("MD600"), twin.plc.mem.read("MD600"))
+            self.assertEqual(src.mem.read("VD1044"), twin.plc.mem.read("VD1044"))
+            src._client.close()
+        finally:
+            srv.shutdown()
+            srv.server_close()
