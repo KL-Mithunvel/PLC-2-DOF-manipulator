@@ -7,7 +7,7 @@ import threading
 import time
 from collections import deque
 
-from .config import TwinCfg, load_config
+from .config import OVERRIDE_FILE, TwinCfg, apply_overrides, load_config
 from .plc import PDO_MAP, PLC
 from .plant import Arm
 
@@ -203,6 +203,10 @@ class Twin:
             elif kind == "defaults":
                 self.plc.load_defaults()
                 self.note("taught points reset to defaults")
+            elif kind == "config":
+                return {"ok": True, "config": self.reconfigure(c.get("values", {}), bool(c.get("save")))}
+            elif kind == "config_get":
+                return {"ok": True, "config": self.config_values(), "keys": {k: list(v) for k, v in self.CONFIG_KEYS.items()}}
             elif kind == "teach_jog":
                 pass
             return {"ok": True}
@@ -228,6 +232,70 @@ class Twin:
         self._prev_bits.clear()
         self.powered = True
         self.note("power ON")
+
+    # ------------------------------------------------------------------ live configuration
+    CONFIG_KEYS = {          # key -> (label, kind)   only these can be changed from the UI / HTTP
+        "timer_base_ms": ("PLC timer base T1..T26 (ms per unit)", "num"),
+        "sm03_period_s": ("%SM0.3 clock period (s)", "num"),
+        "base.profile_rpm": ("base drive profile speed when PDO 60FF = 0 (rpm)", "num"),
+        "shoulder.profile_rpm": ("shoulder drive profile speed (rpm)", "num"),
+        "base.accel_default_rpms": ("base default acceleration (rpm/s)", "num"),
+        "shoulder.accel_default_rpms": ("shoulder default acceleration (rpm/s)", "num"),
+        "base.kt": ("base motor torque constant (N.m/A)", "num"),
+        "shoulder.kt": ("shoulder motor torque constant (N.m/A)", "num"),
+        "arm.shoulder_height": ("shoulder axis height (m)", "num"),
+        "arm.drop_link": ("drop link length (m)", "num"),
+        "arm.m_link1": ("link-1 mass (kg)", "num"),
+        "arm.m_link2": ("link-2 + magnet mass (kg)", "num"),
+        "arm.use_rigid_body": ("dynamics from the rigid-body model", "bool"),
+        "fix_vw2400_overlap": ("patch: move C2 mirror off %VD2400", "bool"),
+        "fix_estop_magnet_latch": ("patch: E-stop clears the auto-magnet latch", "bool"),
+    }
+
+    def config_values(self) -> dict:
+        out = {}
+        for key in self.CONFIG_KEYS:
+            obj = self.cfg
+            *path, leaf = key.split(".")
+            for part in path:
+                obj = getattr(obj, part)
+            out[key] = getattr(obj, leaf)
+        return out
+
+    def reconfigure(self, overrides: dict, save: bool = False) -> dict:
+        """Apply whitelisted parameter changes. The PLC is rebuilt like a power cycle (retentive data kept, the
+        arm keeps its pose), because timer base and program patches change the loaded program."""
+        bad = [k for k in overrides if k not in self.CONFIG_KEYS]
+        if bad:
+            raise KeyError(f"not configurable: {bad}")
+        from .plc import PLC, RETENTIVE
+        from .plant import Arm
+        with self.lock:
+            apply_overrides(self.cfg, overrides)
+            keep = {a: self.plc.mem.read(a) for a in RETENTIVE}
+            online = self.plc.can_online
+            self.plc = PLC(self.cfg)
+            for a, v in keep.items():
+                self.plc.mem.write(a, v)
+            self.plc.can_online = online
+            old = self.arm
+            new = Arm(self.cfg)
+            for o, n in ((old.base, new.base), (old.shoulder, new.shoulder)):
+                n.theta = n.ref = n.target_angle = o.theta
+                n.cmd = o.cmd
+            new.part, new.placed, new.pick_site = old.part, old.placed, old.pick_site
+            new.picks, new.drops = old.picks, old.drops
+            self.arm = new
+            self._prev_bits.clear()
+            self.note("configuration changed: " + ", ".join(f"{k}={v}" for k, v in overrides.items()))
+            if save:
+                import json
+                import os
+                cur = json.load(open(OVERRIDE_FILE)) if os.path.exists(OVERRIDE_FILE) else {}
+                cur.update(overrides)
+                with open(OVERRIDE_FILE, "w") as fh:
+                    json.dump(cur, fh, indent=1)
+        return self.config_values()
 
     # ------------------------------------------------------------------ snapshot for the UI
     def snapshot(self) -> dict:

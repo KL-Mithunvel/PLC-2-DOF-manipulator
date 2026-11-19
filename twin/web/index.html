@@ -31,7 +31,8 @@
 <main>
   <section id="colLeft">
     <div class="card">
-      <div class="cardhead">HMI &nbsp;<small>Kinco M2070HE-WIFI, 1024x600 &middot; Modbus TCP to PLC 192.168.0.252:502</small></div>
+      <div class="cardhead">HMI &nbsp;<small>Kinco M2070HE-WIFI, 1024x600 &middot; Modbus TCP to PLC 192.168.0.252:502</small>
+        <select id="selHmiScreen" style="float:right" title="Wi-Fi and Login are system windows of the panel, shown for reference"><option value="AUTO">Auto</option><option value="MANUAL">Manual</option><option value="SETTING">Setting</option><option value="WIFI">Wi-Fi / network (system)</option><option value="LOGIN">Login (system)</option></select></div>
       <div id="hmiWrap"><div id="hmi"></div></div>
     </div>
     <div class="card" id="panelCard">
@@ -75,6 +76,7 @@
     <button data-tab="mem">I/O &amp; memory</button>
     <button data-tab="can">CANopen / PDO</button>
     <button data-tab="scope">Scope</button>
+    <button data-tab="cfg">Settings</button>
     <button data-tab="struct">Structural load</button>
     <button data-tab="src">Data sources</button>
     <button data-tab="notes">Model &amp; findings</button>
@@ -90,6 +92,7 @@
   <div id="tab-mem" class="tab"><div id="memView"></div></div>
   <div id="tab-can" class="tab"><div id="canView"></div></div>
   <div id="tab-scope" class="tab"><canvas id="cvScope"></canvas></div>
+  <div id="tab-cfg" class="tab"><div id="cfgView"></div></div>
   <div id="tab-struct" class="tab"><div style="display:grid;grid-template-columns:minmax(380px,34%) 1fr;gap:12px"><div><div id="structCards"></div>
     <p style="color:var(--dim)">Quasi-static, linear estimate: stress and deflection of each body are scaled from the Ansys Pose A results by the live bending moment (rigid-body reaction loads, including dynamics). It is <b>not</b> a live FEA solve. The paper's own joint FOS values (9.79 / 4.63) are inconsistent with its stress plot (8.81 MPa gives FOS 28), so the scaled FOS here will be higher than the Ansys-reported minimum.</p></div>
     <canvas id="cvStruct" style="width:100%;height:420px;background:#0b1118;border-radius:6px"></canvas></div></div>

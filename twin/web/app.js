@@ -106,8 +106,58 @@ function sw(sc, x, y, w, h, get, on) { const s = el("div", "hmi-sw", "<i></i>");
   ni(t, 658, 527, 90, 44, (s) => s.regs.VD2030, (v) => cmd({ type: "numeric", tag: "SH_SPEED", value: v }));
   btn(t, 882, 530, 112, 46, "AUTO", "go:AUTO", "nav");
 })();
+
+/* ---- system windows of the panel (not part of the process; static replicas for reference): Wi-Fi/network (window 11) and Login (window 9) ---- */
+(function buildSystemScreens() {
+  const w = screen("WIFI", "linear-gradient(#1a7bff,#bfe0ff)");
+  const sans = "font:16px Arial,sans-serif;color:#000";
+  w.insertAdjacentHTML("beforeend", `
+   <div class="hmi-el" style="left:68px;top:14px;width:888px;height:434px;background:#fff"></div>
+   <div class="hmi-txt" style="left:152px;top:16px;font-size:26px;font-weight:400">WIFI Connection</div><div class="hmi-txt" style="left:541px;top:16px;font-size:26px;font-weight:400">Network</div>
+   <div class="hmi-txt" style="left:217px;top:76px;font-size:26px;font-weight:400">WIFI</div>
+   <div class="hmi-sw" style="left:356px;top:78px;width:66px;height:26px"><i style="width:22px;height:22px;top:2px"></i></div>
+   <div class="hmi-el" style="left:545px;top:62px;width:404px;height:244px;border:1px solid #777;background:#fff"></div>
+   <div class="hmi-el" style="left:173px;top:251px;width:233px;height:32px;border:1px solid #965;${sans};display:flex;align-items:center;justify-content:center">Not Select Wifi Network</div>
+   <div class="hmi-btn" style="left:622px;top:316px;width:82px;height:36px;background:#fff;border:1px solid #888;color:#1a7bff;font-size:28px">&#9664;|</div>
+   <div class="hmi-btn" style="left:777px;top:316px;width:82px;height:36px;background:#fff;border:1px solid #888;color:#1a7bff;font-size:28px">|&#9654;</div>
+   <div class="hmi-el" style="left:545px;top:358px;width:296px;height:40px;border:1px solid #777;background:#fff;${sans};display:flex;align-items:center;justify-content:center">AAAAAAAAAAAAAAAA</div>
+   <div class="hmi-el" style="left:545px;top:408px;width:296px;height:40px;border:1px solid #777;background:#fff;${sans};display:flex;align-items:center;justify-content:center">AAAAAAAAAAAAAAAA</div>
+   <div class="hmi-txt" style="left:386px;top:416px;font-size:22px;font-weight:400">Enter Password</div>
+   <div class="hmi-btn" style="left:846px;top:413px;width:100px;height:34px;background:#4fb3ef;border:0;color:#000;font:15px Arial">Join</div>
+   <div class="hmi-txt" style="left:2px;top:462px;font-size:22px;font-weight:400">WIFI State:</div>
+   <div class="hmi-el" style="left:139px;top:461px;width:114px;height:32px;border:1px solid #965;${sans};display:flex;align-items:center;justify-content:center">Disconnect</div>
+   <div class="hmi-el" style="left:278px;top:463px;width:175px;height:30px;border:1px solid #965;${sans};display:flex;align-items:center;justify-content:center">AAAAAAAAAAAAAAAA</div>
+   <div class="hmi-txt" style="left:560px;top:458px;font-size:22px;font-weight:400">IP:</div>
+   <div class="hmi-el" style="left:605px;top:464px;width:200px;height:26px;border:1px solid #965;${sans};text-align:center">###&nbsp;.&nbsp;###&nbsp;.&nbsp;###&nbsp;.&nbsp;###</div>
+   <div class="hmi-btn" style="left:824px;top:458px;width:192px;height:34px;background:#4fb3ef;border:0;color:#000;font:15px Arial">Remove This Network</div>
+   <div class="hmi-el" style="left:0;top:496px;width:1024px;height:104px;background:linear-gradient(#e7f1ff,#bcd8ff)"></div>
+   <div class="hmi-txt" style="left:16px;top:508px;font-size:22px;font-weight:400">Server:</div><div class="hmi-txt" style="left:16px;top:546px;font-size:22px;font-weight:400">Device N</div>
+   <div class="hmi-el" style="left:111px;top:509px;width:216px;height:28px;border:1px solid #666;background:#fff;${sans};padding:4px 8px">China Server</div>
+   <div class="hmi-txt" style="left:359px;top:508px;font-size:22px;font-weight:400">Setting:</div>
+   <div class="hmi-sw" style="left:466px;top:512px;width:66px;height:26px"><i style="width:22px;height:22px;top:2px"></i></div>
+   <div class="hmi-txt" style="left:365px;top:550px;font-size:22px;font-weight:400">State:</div>
+   <div class="hmi-el" style="left:440px;top:549px;width:264px;height:34px;border:1px solid #965;background:#fff;${sans};display:flex;align-items:center;justify-content:center">Internet's NOT Working</div>
+   <div class="hmi-txt" style="left:729px;top:508px;font-size:22px;font-weight:400">Virtual IP:</div>
+   <div class="hmi-el" style="left:729px;top:549px;width:262px;height:32px;border:1px solid #965;background:#fff;${sans};text-align:center;line-height:32px">###&nbsp;.&nbsp;###&nbsp;.&nbsp;###&nbsp;.&nbsp;###</div>`);
+  const l = screen("LOGIN", "#8a8f99");
+  l.insertAdjacentHTML("beforeend", `
+   <div class="hmi-el" style="left:309px;top:161px;width:405px;height:277px;background:#fff;border:1px solid #444">
+    <div class="hmi-el" style="left:0;top:0;width:405px;height:38px;background:linear-gradient(#1a7bff,#4fb3ef);color:#fff;font:bold 22px Arial;padding:6px 8px">USER ACCESS&nbsp; LOGIN</div>
+    <div class="hmi-el" style="left:367px;top:0;width:38px;height:38px;background:#ff4b5c;color:#fff;font:30px Arial;text-align:center;line-height:36px">&#10005;</div>
+    <div class="hmi-txt" style="left:30px;top:62px;font:16px Arial;font-weight:400">USER NAME</div><div class="hmi-txt" style="left:30px;top:98px;font:16px Arial;font-weight:400;line-height:20px">ACCESS<br>PASSWORD</div>
+    <div class="hmi-el" style="left:125px;top:58px;width:185px;height:26px;border:1px solid #777;background:#ccc"></div><div class="hmi-el" style="left:125px;top:84px;width:185px;height:80px;background:#c9c9c9"></div>
+    <div class="hmi-btn" style="left:318px;top:57px;width:76px;height:32px;background:#fff;border:2px solid #1a7bff;color:#2b8a2b;font:bold 18px Arial">Login</div>
+    <div class="hmi-btn" style="left:318px;top:111px;width:76px;height:32px;background:#fff;border:2px solid #1a7bff;color:#d00;font:bold 18px Arial">Logout</div>
+    <div class="hmi-el" style="left:0;top:156px;width:405px;height:38px;background:linear-gradient(#1a7bff,#4fb3ef);color:#fff;font:bold 22px Arial;padding:6px 8px">USER LEVEL&nbsp; LOGIN</div>
+    <div class="hmi-txt" style="left:28px;top:208px;font:16px Arial;font-weight:400;line-height:20px">LEVEL<br>PASSWORD</div>
+    <div class="hmi-el" style="left:124px;top:211px;width:182px;height:28px;border:2px solid #1a7bff;background:#fff;text-align:center;font:16px Arial;line-height:26px">&times;&times;&times;&times;&times;&times;&times;&times;&times;&times;</div>
+   </div>`);
+  const sel = $("#selHmiScreen");
+  sel.onchange = () => showScreen(sel.value);
+})();
+
 let curScreen = "AUTO";
-function showScreen(n) { curScreen = n; for (const k in screens) screens[k].classList.toggle("on", k === n); cmd({ type: "screen", name: n }); }
+function showScreen(n) { curScreen = n; if ($("#selHmiScreen")) $("#selHmiScreen").value = n; for (const k in screens) screens[k].classList.toggle("on", k === n); cmd({ type: "screen", name: n }); }
 showScreen("AUTO");
 new ResizeObserver(() => { const w = $("#hmiWrap").clientWidth; HMI.style.transform = `scale(${w / 1024})`; }).observe($("#hmiWrap"));
 
@@ -130,6 +180,13 @@ document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
   document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x.id === "tab-" + b.dataset.tab));
   if (b.dataset.tab === "scope") drawScope();
   if (b.dataset.tab === "struct") drawStruct();
+  if (b.dataset.tab === "cfg" && !cfgBuilt) buildCfg();
+  if (S && S.bits && PROG) {                       // render at once instead of waiting for the next periodic refresh
+    if (b.dataset.tab === "mem") updateMem(S);
+    if (b.dataset.tab === "can") updateCan(S);
+    if (b.dataset.tab === "struct") updateStructCards(S);
+    if (b.dataset.tab === "ladder") updateLadder(S);
+  }
   if (b.dataset.tab === "src") { if (!srcBuilt) buildSources(); }
 });
 
@@ -362,6 +419,21 @@ function buildNotes() {
 }
 
 
+
+/* ===================================================================== settings tab (live configuration) */
+let cfgBuilt = false;
+async function buildCfg() {
+  cfgBuilt = true;
+  const r = await (await fetch("/api/cmd", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "config_get" }) })).json();
+  const rows = Object.entries(r.keys).map(([k, [label, kind]]) => `<tr><td>${label}</td><td><code>${k}</code></td><td>${kind === "bool"
+    ? `<input type="checkbox" data-k="${k}" ${r.config[k] ? "checked" : ""}>` : `<input type="number" step="any" data-k="${k}" value="${r.config[k]}" style="width:110px">`}</td></tr>`).join("");
+  $("#cfgView").innerHTML = `<p style="color:var(--dim)">Changing a value rebuilds the PLC like a power cycle (taught data kept, arm keeps its pose). Assumed values are tagged <code>[assumed]</code> in <code>twin/config.py</code>.</p>
+    <table class="dt">${rows}</table><p><button id="btnCfgApply">Apply</button> <button id="btnCfgSave">Apply and save to twin_config.json</button> <span id="cfgMsg" style="color:var(--dim)"></span></p>`;
+  const collect = () => { const v = {}; document.querySelectorAll("#cfgView [data-k]").forEach((i) => { v[i.dataset.k] = i.type === "checkbox" ? i.checked : parseFloat(i.value); }); return v; };
+  const send = async (save) => { const res = await (await fetch("/api/cmd", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "config", values: collect(), save }) })).json(); $("#cfgMsg").textContent = res.ok ? (save ? "applied and saved" : "applied") : (res.error || "error"); };
+  $("#btnCfgApply").onclick = () => send(false); $("#btnCfgSave").onclick = () => send(true);
+}
+
 /* ===================================================================== data sources tab */
 let srcBuilt = false;
 const post = (o) => cmd(o);
@@ -449,7 +521,7 @@ function render() {
 let ES = null, SRC = "sim", GHOST = "none", HUB = null;
 function connect() {
   if (location.search.includes("snap")) {
-    Promise.all([fetch("/api/state").then((r) => r.json()), fetch("/api/scope").then((r) => r.json())]).then(([s, sc]) => { s.watch = {}; S = window.__lastSnap = s; sc.forEach((x) => scope.push(x)); const m = /tab=(\w+)/.exec(location.search); if (m) document.querySelector(`#tabs button[data-tab=${m[1]}]`).click(); });
+    Promise.all([fetch("/api/state").then((r) => r.json()), fetch("/api/scope").then((r) => r.json())]).then(([s, sc]) => { s.watch = {}; S = window.__lastSnap = s; sc.forEach((x) => scope.push(x)); const sc2 = /screen=(\w+)/.exec(location.search); if (sc2) showScreen(sc2[1]); const m = /tab=(\w+)/.exec(location.search); if (m) document.querySelector(`#tabs button[data-tab=${m[1]}]`).click(); });
     return;
   }
   if (ES) ES.close();
