@@ -48,6 +48,8 @@ class PLC:
             src = fh.read()
         if cfg.fix_vw2400_overlap:     # move the C2 mirror from %VW2400 (aliases %VD2400) to %VW2450
             src = src.replace("%VW2400", "%VW2450")
+        if cfg.fix_estop_magnet_latch:    # proposed patch: E-stop (I0.0 low) must drop the auto-magnet latch
+            src = src.rstrip("\r\n") + "\r\n(* Network 39 *)\r\n(*PATCH: E-STOP CLEARS AUTO MAGNET LATCH*)\r\nLDN    %I0.0\r\nR    %M30.6\r\n"
         self.program = Program.parse(src)
         self.vm = ILMachine(self.program, self.mem, cfg.timer_base_ms)
         self.cycle_addr = "VW2450" if cfg.fix_vw2400_overlap else "VW2400"

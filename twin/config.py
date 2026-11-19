@@ -86,6 +86,7 @@ class TwinCfg:
     default_speed_rpm: tuple = (300, 300)   # HMI speed entries (base, shoulder)
     default_cycles: int = 3
     fix_vw2400_overlap: bool = False  # True = remap the C2 mirror away from %VD2400 (program bug, see docs)
+    fix_estop_magnet_latch: bool = False  # True = add a network that clears the auto-magnet latch %M30.6 when the E-stop opens %I0.0
 
 
 # ---------------------------------------------------------------------------------------------
