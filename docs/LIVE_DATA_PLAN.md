@@ -18,8 +18,8 @@ Four data sources on one bus so everything can be compared and built on:
 | CANopen (`python-can`) | The bus belongs to the PLC (master, node 127) and the two drives. Do not add a PC to it. Drive data is already in PLC memory (`%MD600`, `%VD1044`, ...). |
 | HMI as a data source | No. The HMI is itself a Modbus client of the PLC; its widgets show PLC memory. Its internal registers are not exposed. |
 
-### Open point: Kinco address mapping
-The mapping from `%M20.1` / `%VD1044` to Modbus coil/register numbers is **not verified**. Take it from the KincoBuilder manual's Modbus address table, keep it in a config file, and verify by reading a value visible on the HMI (e.g. `%VD2020`, the base speed) and checking it matches. If the table cannot be found, add a calibration step that scans for known values.
+### Kinco address mapping
+Taken from the Kinco K-series manual, section 10.2.2.3 (page 483): coils/discrete `Q` 0..255, `I` 0..255, `M` 320..8511; registers `V` from 100 (`VW0` = 100, `VW2` = 101). The M area is **bit-only**, so M words (e.g. `%MD600`) are read as coils. Details and verification steps: [LIVE_PLC_USAGE.md](LIVE_PLC_USAGE.md). Still to be confirmed on the real PLC by reading a value shown on the HMI.
 
 ### Cautions
 - **Read-only.** The reader must never write to the PLC.
@@ -42,5 +42,5 @@ Hardware notes: the drives are PWM-fed from the 24 V rail. Measure DC supply cur
 
 ## Open inputs needed
 - PC network reachability to 192.168.0.252
-- Kinco Modbus address table (manual page) or permission to do the calibration scan
+- Confirmation that the manual's address table matches the real PLC (read one HMI value)
 - Sensor choice and where the MCU will live

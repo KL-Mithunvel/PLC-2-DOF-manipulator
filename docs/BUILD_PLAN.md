@@ -127,3 +127,8 @@ Everything buildable without new inputs was built and tested (63 Python tests, 2
 3. Network access + Kinco address table -> `python -m live.scan`, then `python run_twin.py --plc 192.168.0.252`.
 4. Camera + 4 printed tags -> `tools.make_tags`, `mocap.calibrate`, `run_twin.py --mocap`.
 5. Sensor parts -> build the firmware, `run_twin.py --sensors`.
+
+
+## Update (documentation pass)
+- The Kinco **Modbus address table was found** in the PLC manual (now in `docs/reference/vendor/`): the live reader and the twin's Modbus server use it by default; `%M` words are read as coils (the M area is bit-only). It still has to be confirmed on the real PLC.
+- Files reorganised: vendor PDFs in `docs/reference/vendor`, drawings in `docs/reference/drawings`, Ansys report in `docs/reference/reports`, project archives and the EDS file in `project_files/`.

@@ -60,7 +60,7 @@ Controlword values written: `271` (0x010F), `47` (0x002F), `15` (0x000F). Modes 
 - Node IDs 1 and 2 and the same CAN baud rate as the PLC.
 - PDO COB-IDs and mappings as in 2.2 (override the drive defaults).
 - Heartbeat/guard timing: 500 ms heartbeat, 1000 ms node time (PLC overtime 600 ms).
-- Drive EDS in repo: `_MOTOR_SN2.eds`; manual: `docs/CANOPEN Mannual_v1_6 M series Robot Joint Module_.pdf`.
+- Drive EDS in repo: `project_files/drives/YZ_MOTOR_SN2.eds`; manual: `docs/reference/vendor/M-Series_Robot_Joint_Module_CANopen_Manual_v1.6.pdf`.
 
 ### 2.4 Ethernet (PLC <-> HMI / PC)
 | Setting | Value |
@@ -72,6 +72,8 @@ Controlword values written: `271` (0x010F), `47` (0x002F), `15` (0x000F). Modes 
 | Timeout / retry | 2000 ms / 0 |
 
 The HMI must be on 192.168.0.x/24 (not .252) and point at 192.168.0.252:502.
+
+Modbus TCP address map of the PLC (Kinco K-series manual 10.2.2.3, page 483): `%I` discrete 0-255, `%Q` coils 0-255, `%M` coils 320-8511, `%V` registers from 100 (`VW0` = 100). The M area is bit-only. Used by `live/modbus_map.py`; see `docs/LIVE_PLC_USAGE.md`.
 
 ### 2.5 Serial ports
 Confirmed in KincoBuilder (Hardware > Comm): Port0 115200 8N1 station 1; Port1 (RS485) and Port2 (RS485) 9600 8N1 station 1, Modbus master off, timeout 300 ms; Port3 unused. Only relevant if the HMI is wired by serial.
