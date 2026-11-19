@@ -52,7 +52,14 @@ class Hub:
         if name == "sim":
             s = self.twin.snapshot()
             with self.twin.lock:
-                s["sample"] = self.twin.scope[-1] if self.twin.scope else None
+                s["sample"] = dict(self.twin.scope[-1]) if self.twin.scope else None
+            sens = self.live.get("sensors")
+            if sens:
+                meas = sens.latest()
+                s["sensors"] = meas
+                if s["sample"]:
+                    s["sample"]["base_a_meas"] = round(meas.get("base", {}).get("mA", 0) / 1000, 3)
+                    s["sample"]["sh_a_meas"] = round(meas.get("shoulder", {}).get("mA", 0) / 1000, 3)
             return s
         if name == "replay":
             return self.replay.snapshot()

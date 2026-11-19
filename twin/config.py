@@ -84,3 +84,34 @@ class TwinCfg:
     default_speed_rpm: tuple = (300, 300)   # HMI speed entries (base, shoulder)
     default_cycles: int = 3
     fix_vw2400_overlap: bool = False  # True = remap the C2 mirror away from %VD2400 (program bug, see docs)
+
+
+# ---------------------------------------------------------------------------------------------
+# Calibration overrides: a JSON file {"timer_base_ms": 100, "base.profile_rpm": 400, ...} next to run_twin.py
+# is applied on top of the defaults above. Written by tools/calibrate_cycle.py.
+import json as _json
+import os as _os
+
+OVERRIDE_FILE = _os.path.join(_os.path.dirname(_os.path.dirname(__file__)), "twin_config.json")
+
+
+def apply_overrides(cfg: "TwinCfg", overrides: dict) -> "TwinCfg":
+    for key, value in overrides.items():
+        obj = cfg
+        *path, leaf = key.split(".")
+        for part in path:
+            obj = getattr(obj, part)
+        if not hasattr(obj, leaf):
+            raise KeyError(f"unknown config key {key!r}")
+        setattr(obj, leaf, value)
+    return cfg
+
+
+def load_config(path: str | None = None) -> "TwinCfg":
+    """Defaults + overrides from ``path`` (default: twin_config.json if it exists)."""
+    cfg = TwinCfg()
+    path = path or OVERRIDE_FILE
+    if _os.path.exists(path):
+        with open(path) as fh:
+            apply_overrides(cfg, _json.load(fh))
+    return cfg

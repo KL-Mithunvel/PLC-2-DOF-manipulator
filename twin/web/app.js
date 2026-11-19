@@ -303,18 +303,19 @@ function drawScope() {
     { title: "angle (deg)", series: [["base_deg", "#4aa3ff"], ["sh_deg", "#3ddc84"], ["base_ref", "#4aa3ff77", 1], ["sh_ref", "#3ddc8477", 1]] },
     { title: "motor speed (rpm)", series: [["base_rpm", "#4aa3ff"], ["sh_rpm", "#3ddc84"]] },
     { title: "output torque (N.m)", series: [["base_nm", "#4aa3ff"], ["sh_nm", "#3ddc84"], ["sh_grav", "#ffb020", 1]] },
+    { title: "motor current (A): solid = twin estimate, dashed = measured sensor", series: [["base_a", "#4aa3ff"], ["sh_a", "#3ddc84"], ["base_a_meas", "#4aa3ff99", 1], ["sh_a_meas", "#3ddc8499", 1]] },
     { title: "magnet %Q0.7", series: [["mag", "#ff4bd8"]], fixed: [0, 1] }];
   const ph = (H - 8) / panels.length;
   panels.forEach((p, pi) => {
     const y0 = 4 + pi * ph + 14, h = ph - 22, data = scope.filter((s) => s.t >= t0);
-    let lo = Infinity, hi = -Infinity; p.series.forEach(([k]) => data.forEach((s) => { lo = Math.min(lo, s[k]); hi = Math.max(hi, s[k]); }));
+    let lo = Infinity, hi = -Infinity; p.series.forEach(([k]) => data.forEach((s) => { if (s[k] === undefined) return; lo = Math.min(lo, s[k]); hi = Math.max(hi, s[k]); }));
     if (p.fixed) [lo, hi] = p.fixed; if (hi - lo < 1e-6) { hi += 1; lo -= 1; } const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
     c.fillStyle = "#8394a7"; c.font = "11px Segoe UI"; c.fillText(p.title, ml, y0 - 4);
     c.strokeStyle = "#243140"; c.strokeRect(ml, y0, W - ml - mr, h);
     c.fillText(hi.toFixed(1), 4, y0 + 9); c.fillText(lo.toFixed(1), 4, y0 + h);
     if (lo < 0 && hi > 0) { const zy = y0 + h * (1 - (0 - lo) / (hi - lo)); c.strokeStyle = "#31404f"; c.beginPath(); c.moveTo(ml, zy); c.lineTo(W - mr, zy); c.stroke(); }
     p.series.forEach(([k, col, dash]) => { c.strokeStyle = col; c.lineWidth = dash ? 1 : 1.6; c.setLineDash(dash ? [4, 3] : []); c.beginPath();
-      data.forEach((s, i) => { const x = ml + (s.t - t0) / T * (W - ml - mr), y = y0 + h * (1 - (s[k] - lo) / (hi - lo)); i ? c.lineTo(x, y) : c.moveTo(x, y); }); c.stroke(); c.setLineDash([]); });
+      let pen = false; data.forEach((s) => { if (s[k] === undefined) return; const x = ml + (s.t - t0) / T * (W - ml - mr), y = y0 + h * (1 - (s[k] - lo) / (hi - lo)); pen ? c.lineTo(x, y) : c.moveTo(x, y); pen = true; }); c.stroke(); c.setLineDash([]); });
   });
 }
 
@@ -408,8 +409,9 @@ function render() {
       $("#viewInfo").innerHTML += `<br><span style="color:#4ae0ff">ghost (${g.source}) &Delta; base ${(g.base.deg - s.base.deg).toFixed(2)}&deg; &nbsp; shoulder ${(g.shoulder.deg - s.shoulder.deg).toFixed(2)}&deg; &nbsp; tip ${d.toFixed(1)} mm</span>`;
     }
     if (frame % 3 === 0) {
-      axisCard($("#axBase"), "Base motor &mdash; node 1 &middot; M8025 101:1", s.base, `<tr><td>inertia J</td><td>${ld.j_base.toFixed(2)} kg&middot;m&sup2;</td></tr>`);
-      axisCard($("#axSh"), "Shoulder motor &mdash; node 2 &middot; M8010 81:1", s.shoulder, `<tr><td>gravity torque</td><td>${ld.t_grav.toFixed(1)} N&middot;m</td></tr>`);
+      const meas = (k) => { const m = s.sensors && s.sensors[k]; return m ? `<tr><td>measured (sensor)</td><td>${(m.mA / 1000).toFixed(2)} A &middot; ${(m.mV / 1000).toFixed(1)} V &middot; ${m.W.toFixed(1)} W</td></tr>` : ""; };
+      axisCard($("#axBase"), "Base motor &mdash; node 1 &middot; M8025 101:1", s.base, `<tr><td>inertia J</td><td>${ld.j_base.toFixed(2)} kg&middot;m&sup2;</td></tr>` + meas("base"));
+      axisCard($("#axSh"), "Shoulder motor &mdash; node 2 &middot; M8010 81:1", s.shoulder, `<tr><td>gravity torque</td><td>${ld.t_grav.toFixed(1)} N&middot;m</td></tr>` + meas("shoulder"));
       $("#logbox").textContent = (s.log || []).slice().reverse().join("\n");
     }
     if (frame % 4 === 0) updateLadder(s);

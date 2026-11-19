@@ -7,7 +7,7 @@ import threading
 import time
 from collections import deque
 
-from .config import TwinCfg
+from .config import TwinCfg, load_config
 from .plc import PDO_MAP, PLC
 from .plant import Arm
 
@@ -28,7 +28,7 @@ HMI_NUMERIC = {"BASE_SPEED": "VD2020", "SH_SPEED": "VD2030", "CYCLES": "VW2036"}
 
 class Twin:
     def __init__(self, cfg: TwinCfg | None = None, persist: bool = False) -> None:
-        self.cfg = cfg or TwinCfg()
+        self.cfg = cfg or load_config()
         self.persist = persist
         self.lock = threading.RLock()
         self.plc = PLC(self.cfg)
@@ -129,6 +129,7 @@ class Twin:
             "base_rpm": a.base.vel_rpm, "sh_rpm": a.shoulder.vel_rpm,
             "base_nm": round(a.base.tau, 2), "sh_nm": round(a.shoulder.tau, 2),
             "sh_grav": round(a.shoulder.t_ext, 2),
+            "base_a": round(a.base.current_ma / 1000, 3), "sh_a": round(a.shoulder.current_ma / 1000, 3),
             "mag": int(m.read("Q0.7")),
         })
 
