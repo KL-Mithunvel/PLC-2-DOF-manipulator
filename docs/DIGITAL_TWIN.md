@@ -27,3 +27,13 @@ part pose, taught points and all PLC state; commands go to `POST /api/cmd`.
 Counts = motor encoder counts (15-bit, 32768/rev) before the reducer; timer base 10 ms; `%SM0.3` = 1 s clock; shoulder height, drop link, rotor inertias,
 friction, torque constants, accel/profile speed defaults; default taught points; HMI button behaviour (momentary vs maintained). Compare the simulated
 cycle time with the real one to calibrate the timer base and speeds.
+
+## Planned next stage (stated 2026-11-19): CAD model, real physics, load graphs
+1. **Exact 3D model.** User will supply the CAD. Replace the primitives in `twin/web/arm3d.js` with per-body glTF/GLB meshes (base, joint, Link-1, Link-2+magnet, part), each with its origin on its joint axis so the existing yaw/pitch groups drive them unchanged.
+2. **Real physics.** Replace the point-mass/rod formulas in `twin/plant.py` with rigid-body dynamics using CAD mass, centre of mass and inertia tensor per body (also replaces the assumed 2.0 / 1.5 kg masses), plus gear/backlash/compliance if data exists.
+3. **Load graph like the Ansys study.** Live graph of what the structure is going through: joint reaction force/moment (from the rigid-body model), equivalent stress, factor of safety and deformation, over time, for comparison with the Ansys report (min FOS 4.63 at the joint, 0.085 mm max deflection, 8.81 MPa peak stress).
+   - Approach: the structure is linear and lightly loaded (<9 MPa), so run FEA at unit loads/poses (Ansys exports, or an open solver) and scale by the live reaction loads, or interpolate a table over (shoulder angle, payload).
+   - Optional: colour the 3D meshes by stress/FOS.
+   - Limit: this reproduces the static/quasi-static Ansys result; it is not a live FEA solve.
+
+Inputs needed: CAD (STEP, or per-body STL/OBJ/GLB) with units and axes; per-body mass properties from CAD with material assignments; Ansys result exports if available (stress/deformation per pose, joint reaction probes).
