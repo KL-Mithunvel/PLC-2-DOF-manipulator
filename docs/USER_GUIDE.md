@@ -3,10 +3,12 @@
 ## Start and stop
 ```
 python run_twin.py                 opens http://127.0.0.1:8765 (Ctrl+C in the terminal stops it)
+python run_twin.py --demo                   showcase mode: loops the 3-cycle program by itself, no hardware (click to take over)
 python run_twin.py --no-browser    do not open a browser
 python run_twin.py --fresh         ignore saved taught points / speeds, start from the defaults
 python run_twin.py --modbus-serve 1502       also serve the twin over Modbus TCP (read-only)
 python run_twin.py --plc 192.168.0.252       add the real PLC as a read-only live source
+python run_twin.py --hmi-vnc 192.168.0.100           show the real HMI (view-only VNC); password via env HMI_VNC_PASSWORD
 python run_twin.py --mocap 0 --mocap-calib mocap/camera.json      add camera tracking
 python run_twin.py --sensors udp:9100        add motor current/voltage sensors
 ```
@@ -39,7 +41,7 @@ The dropdown above the screen switches between Auto, Manual, Setting and, for re
 ## Tabs (bottom)
 | Tab | Content |
 |---|---|
-| Ladder program (live) | The real program as a ladder diagram or IL listing with operand values; green = power flows, amber dot = instruction executed this scan. "follow auto sequence" scrolls to the active network. |
+| Ladder program (live) | The real program as a ladder diagram or IL listing with operand values; green = power flows, amber dot = instruction executed this scan. "follow auto sequence" scrolls to the active network. Navigation: one scroll area in both directions; drag to pan, Shift + wheel = sideways, Ctrl + wheel or the +/- buttons = zoom, **Fit width** shows a whole rung, **go to** jumps to a network, **Tall** / **Full screen** enlarge the view. |
 | I/O & memory | Bits, registers, timers, counters of the simulated PLC |
 | CANopen / PDO | Live PDO table: node, COB-ID, object, PLC address, value, hex |
 | Scope | Last 25 s: angles (with reference), speed, torque (with gravity torque), motor current (simulated and measured), magnet |
@@ -49,7 +51,8 @@ The dropdown above the screen switches between Auto, Manual, Setting and, for re
 | Model & findings | Short summary of what is simulated, findings and assumptions |
 
 ## 3D view
-Drag to orbit, wheel to zoom. Pink glow = magnet on, joint colour = load against the continuous rating, orange trail = tip path, markers = taught points (INI, 1, 2 PICK, 3, 4 DROP), dashed ring = 843 mm work envelope. If `twin/web/models/manifest.json` exists the CAD models replace the placeholder shapes.
+**Navigation:** left-drag orbit, right-drag pan, wheel zoom (towards the cursor), double-click or `R` = back to the default view. The bar over the view has **Iso / Top / Front / Side / Back** (keys 1-5, animated), **Follow tip** (`F`, keeps the arm tip centred), **Fit** (`0`, frames the whole arm), **Reset**, **Tall** and **Full screen**. Keys work while the pointer is over the 3D view. If the view ever feels stuck, press `R`.
+Pink glow = magnet on, joint colour = load against the continuous rating, orange trail = tip path, markers = taught points (INI, 1, 2 PICK, 3, 4 DROP), dashed ring = 843 mm work envelope. If `twin/web/models/manifest.json` exists the CAD models replace the placeholder shapes.
 
 ## Recording, replay, comparison
 Data sources tab: choose a source, Record (writes `logs/<time>.jsonl`), Stop. Load a log under Replay and choose it as the primary source, or as the ghost. Compare two logs (time alignment is automatic):

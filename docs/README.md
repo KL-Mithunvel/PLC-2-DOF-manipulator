@@ -9,10 +9,14 @@
 | [PLC_Program_and_Communication.md](PLC_Program_and_Communication.md) | Extracted ladder structure, CANopen/PDO map, PLC memory map, Ethernet settings, HMI screens |
 | [PLC_FINDINGS.md](PLC_FINDINGS.md) | Defects and quirks found by running the real ladder (with proposed fixes) |
 | [SCHEMA.md](SCHEMA.md) | JSON snapshot format shared by every data source |
-| [LIVE_PLC_USAGE.md](LIVE_PLC_USAGE.md) | Connecting to the real PLC over Modbus TCP (read-only) |
+| [LIVE_PLC_USAGE.md](LIVE_PLC_USAGE.md) | Connecting to the real PLC over Modbus TCP (read-only) and the real HMI over VNC (view-only) |
+| [RESEARCH_ANGLES.md](RESEARCH_ANGLES.md) | Every research angle (shadow-and-diverge and others): question, data, method, metric, status |
+| [HARDWARE_TEST_PLAN.md](HARDWARE_TEST_PLAN.md) | Checklist and log template for real-hardware sessions (PLC, HMI over VNC, arm) |
 | [LIVE_DATA_PLAN.md](LIVE_DATA_PLAN.md) | Plan for live PLC, HMI and per-motor current/voltage sensors |
 | [MOCAP_PLAN.md](MOCAP_PLAN.md) | Motion-capture plan, what was built, measured accuracy, camera placement |
 | [CAD_IMPORT.md](CAD_IMPORT.md) | Importing CAD bodies (3D models and mass properties) |
+| [DECISIONS_2026-11-20.md](DECISIONS_2026-11-20.md) | Record of the scope discussion, decisions and work of 2026-11-20 |
+| [MODULAR_BUILD_PLAN.md](MODULAR_BUILD_PLAN.md) | Staged plan: build and test each module alone, then integrate; field-test gates |
 | [BUILD_PLAN.md](BUILD_PLAN.md) | Roadmap, what is built and what is blocked on inputs |
 
 ## Project background

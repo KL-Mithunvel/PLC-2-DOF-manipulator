@@ -62,9 +62,16 @@
 
   <section id="colRight">
     <div class="card">
-      <div class="cardhead">Digital arm <small>drag = orbit &middot; wheel = zoom &middot; three.js, same <code>/api/stream</code> feed &middot; joint colour = load vs rating</small></div>
+      <div class="cardhead">Digital arm <small>left-drag orbit &middot; right-drag pan &middot; wheel zoom to cursor &middot; double-click reset &middot; keys 1-5 views, F follow, R reset &middot; joint colour = load vs rating</small></div>
       <div id="viewWrap">
         <canvas id="cvIso"></canvas>
+        <div id="viewBar">
+          <button data-view="iso" class="on" title="isometric (1)">Iso</button><button data-view="top" title="top (2)">Top</button><button data-view="front" title="front (3)">Front</button><button data-view="side" title="side (4)">Side</button><button data-view="back" title="back (5)">Back</button>
+          <span class="sep"></span>
+          <button id="vbFollow" title="keep the arm tip in the centre (F)">Follow tip</button><button id="vbFit" title="frame the whole arm (0)">Fit</button><button id="vbReset" title="back to the default view (R, or double-click)">Reset</button>
+          <span class="sep"></span>
+          <button id="vbSize" title="make the 3D view taller">Tall</button><button id="vbFull" title="full screen">Full screen</button>
+        </div>
         <div id="smallViews"><canvas id="cvTop"></canvas><canvas id="cvSide"></canvas></div>
         <div id="viewInfo"></div>
       </div>
@@ -92,9 +99,12 @@
       <label>view <select id="selLadderView"><option value="diagram">ladder diagram</option><option value="list">IL listing with values</option></select></label>
       <label><input type="checkbox" id="chkActive"> only energised networks</label>
       <label><input type="checkbox" id="chkFollow" checked> follow auto sequence</label>
+      <span class="lzoom"><button id="lzOut" title="zoom out (ctrl + wheel)">&minus;</button><b id="lzVal">100%</b><button id="lzIn" title="zoom in">+</button><button id="lzFit" title="fit the widest rung to the window width">Fit width</button><button id="lz100">100%</button></span>
+      <label>go to <select id="selJump" title="jump to a network"></select></label>
+      <button id="lzTall" title="make the ladder view taller">Tall</button><button id="lzFull" title="full screen">Full screen</button>
       <span class="legend"><b class="t1">&#9632;</b> power flows &nbsp; <b class="t0">&#9632;</b> off &nbsp; <b class="act">&#9679;</b> instruction executed this scan</span>
     </div>
-    <div id="ladderDiag"></div>
+    <div id="ladderDiag" title="drag to pan &middot; shift + wheel = sideways &middot; ctrl + wheel = zoom"></div>
     <div id="ladder" style="display:none"></div>
   </div>
   <div id="tab-mem" class="tab"><div id="memView"></div></div>

@@ -303,19 +303,52 @@ async function buildLadder() {
   try { await buildDiagrams(); } catch (e) { console.warn("ladder diagram unavailable", e); $("#selLadderView").value = "list"; applyLadderView(); }
 }
 const diagEls = new Map();      // instruction index -> svg groups
+let ladZoom = 1, ladMaxW = 0;
+const diagSvgs = [];
 async function buildDiagrams() {
   const L = await import("./ladder.js");
-  const host = $("#ladderDiag"); host.innerHTML = "";
+  const host = $("#ladderDiag"); host.innerHTML = ""; diagSvgs.length = 0; ladMaxW = 0;
+  const jump = $("#selJump"); jump.innerHTML = "";
   PROG.networks.forEach((n, ni) => {
     const d = el("div", "net"); d.appendChild(el("div", "nethead", `<i></i>Network ${n.index} <em>${n.label || ""}</em>`));
-    const sc = el("div", "dscroll"), svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    sc.appendChild(svg); d.appendChild(sc); host.appendChild(d);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    d.appendChild(svg); host.appendChild(d);
     const ins = PROG.instrs.slice(n.first, n.last).map((x, k) => ({ op: x.op, args: x.args, idx: n.first + k }));
-    const map = L.render(svg, L.layoutNetwork(ins));
+    const lay = L.layoutNetwork(ins), map = L.render(svg, lay);
+    svg.setAttribute("viewBox", `0 0 ${lay.width} ${lay.height}`); svg.dataset.w = lay.width; svg.dataset.h = lay.height; diagSvgs.push(svg); ladMaxW = Math.max(ladMaxW, lay.width);
     map.forEach((v, k) => diagEls.set(k, v));
     diagNets[ni] = d;
+    jump.appendChild(new Option(`Network ${n.index}${n.label ? " - " + n.label : ""}`, ni));
   });
+  setLadZoom(1);
   applyLadderView();
+}
+function setLadZoom(z) {
+  ladZoom = Math.max(0.3, Math.min(2.5, z));
+  diagSvgs.forEach((svg) => { svg.setAttribute("width", Math.round(svg.dataset.w * ladZoom)); svg.setAttribute("height", Math.round(svg.dataset.h * ladZoom)); });
+  $("#lzVal").textContent = Math.round(ladZoom * 100) + "%";
+}
+function ladSetup() {
+  const box = $("#ladderDiag");
+  $("#lzIn").onclick = () => setLadZoom(ladZoom * 1.2); $("#lzOut").onclick = () => setLadZoom(ladZoom / 1.2); $("#lz100").onclick = () => setLadZoom(1);
+  $("#lzFit").onclick = () => { setLadZoom((box.clientWidth - 24) / ladMaxW); box.scrollLeft = 0; };
+  $("#selJump").onchange = (e) => { const n = diagNets[+e.target.value]; if (n) { box.scrollTop = n.offsetTop - 40; box.scrollLeft = 0; } };
+  $("#lzTall").onclick = (e) => { box.classList.toggle("tall"); $("#ladder").classList.toggle("tall"); e.target.classList.toggle("on", box.classList.contains("tall")); };
+  $("#lzFull").onclick = () => { const t = $("#tab-ladder"); if (document.fullscreenElement) document.exitFullscreen(); else t.requestFullscreen && t.requestFullscreen(); };
+  // wheel: shift = sideways, ctrl = zoom (plain wheel scrolls vertically as usual)
+  box.addEventListener("wheel", (e) => {
+    if (e.ctrlKey) { e.preventDefault(); setLadZoom(ladZoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); }
+    else if (e.shiftKey) { e.preventDefault(); box.scrollLeft += e.deltaY || e.deltaX; }
+  }, { passive: false });
+  // drag to pan
+  let drag = null;
+  box.addEventListener("pointerdown", (e) => { if (e.button !== 0) return; drag = { x: e.clientX, y: e.clientY, l: box.scrollLeft, t: box.scrollTop, moved: false }; });
+  window.addEventListener("pointermove", (e) => {
+    if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+    drag.moved = true; box.classList.add("panning"); box.scrollLeft = drag.l - dx; box.scrollTop = drag.t - dy;
+  });
+  window.addEventListener("pointerup", () => { drag = null; box.classList.remove("panning"); });
 }
 const diagNets = [];
 function applyLadderView() {
@@ -349,7 +382,7 @@ function updateLadder(s) {
   netEls.forEach((d, i) => { const f = PROG.networks[i].index === target; d.classList.toggle("focus", f); if (diagNets[i]) diagNets[i].classList.toggle("focus", f); });
   if ($("#chkFollow").checked && target !== lastFollow && $("#tab-ladder").classList.contains("on")) {
     lastFollow = target; const idx = PROG.networks.findIndex((n) => n.index === target);
-    if (idx >= 0) { const diag = $("#selLadderView").value === "diagram" && diagNets[idx]; const box = diag ? $("#ladderDiag") : $("#ladder"); box.scrollTop = (diag ? diagNets[idx] : netEls[idx]).offsetTop - 40; }
+    if (idx >= 0) { const diag = $("#selLadderView").value === "diagram" && diagNets[idx]; const box = diag ? $("#ladderDiag") : $("#ladder"); box.scrollTop = (diag ? diagNets[idx] : netEls[idx]).offsetTop - 40; if (diag) box.scrollLeft = 0; }
   }
 }
 
@@ -596,4 +629,31 @@ function connect() {
   };
   es.onerror = () => { if (ES === es) { es.close(); setTimeout(connect, 1000); } };
 }
+ladSetup();
 buildLadder().then(() => { connect(); requestAnimationFrame(render); });
+
+/* ---- demo mode (?demo=1): loops the 3-cycle program unattended; any click on the page stops it ---- */
+if (/[?&]demo=1/.test(location.search)) {
+  const badge = el("div", "", "DEMO &mdash; running the 3-cycle program in a loop &middot; click anywhere to take over"); badge.id = "demoBadge"; document.body.appendChild(badge);
+  let stopped = false, busy = false;
+  const stop = () => { stopped = true; badge.remove(); window.removeEventListener("pointerdown", stop, true); };
+  setTimeout(() => window.addEventListener("pointerdown", stop, true), 800);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const press = async (o, ms) => { cmd({ ...o }); await sleep(ms); };
+  (async function loop() {
+    await sleep(3000);
+    while (!stopped) {
+      if (S && S.bits && !busy) {
+        const running = S.bits["M30.1"], done = S.bits["M30.2"];
+        if (!running) {      // idle or finished: clear counters, re-home, start
+          busy = true;
+          if (done || S.bits["M31.0"]) { await press({ type: "button", tag: "RESET", down: true }, 500); await press({ type: "button", tag: "RESET", down: false }, 800); }
+          await press({ type: "reset_btn", down: true }, 1000); await press({ type: "reset_btn", down: false }, 9000 / Math.max(0.5, +$("#selSpeed").value));
+          await press({ type: "button", tag: "START", down: true }, 400); await press({ type: "button", tag: "START", down: false }, 100);
+          busy = false;
+        }
+      }
+      await sleep(1500);
+    }
+  })();
+}

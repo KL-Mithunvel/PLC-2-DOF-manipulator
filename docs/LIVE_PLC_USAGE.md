@@ -29,6 +29,22 @@ Network: the PC needs a static IP on the PLC's subnet that is **not** the PLC's 
 3. Run the twin with the live feed: `python run_twin.py --plc 192.168.0.252`. In the **Data sources** tab pick `plc` as the ghost: a translucent cyan arm follows the real encoder counts (`%MD600`, `%VD1044`) next to the simulated arm, with the angle and tip error shown under the 3D view. While the ghost is `plc` the **HMI replica mirrors the real PLC values** (speeds, taught positions, cycle counters, magnet switch; read-only, cyan outline); with ghost `none` it shows the simulation. Open `http://127.0.0.1:8765/?ghost=plc` (optionally `&screen=MANUAL`) to start mirrored. Reload the page after restarting the twin. The replica cannot follow which screen the real HMI shows (the PLC does not expose it).
 4. Record (Data sources tab) while running the real arm, then compare runs offline (`tools/compare_runs.py`).
 
+## Real HMI over VNC (view only)
+The real HMI panel (Kinco M2070HE-WIFI; DTools lists it at 192.168.0.100, check the address actually in use on the day) is grabbed as a picture over VNC and shown in the twin GUI next to the HMI replica, with the taught-point table beside it. Code: `live/hmi_vnc.py` (built 2026-11-20, first step, design to be revisited).
+
+- Start: `python run_twin.py --plc 192.168.0.252 --hmi-vnc <hmi-ip>[:5900]`. The password is given with `--hmi-vnc-password` or the environment variable `HMI_VNC_PASSWORD`; **it is never stored in the repo** (do not write it into docs or config).
+- Library: `vncdotool` (in `requirements.txt`). Only `captureScreen` is ever called: no mouse, key or clipboard call exists in the code, so the feed cannot operate the HMI. Frame rate 2 Hz; it reconnects every 3 s after an error.
+- The twin serves the latest frame at `GET /api/hmi.png` and its status (connected, info, age) in the snapshot as `hmi_vnc`. The GUI card "Real HMI" shows it.
+- What it gives you: the operator's view (which screen is open, lamps, values). The PLC does not expose which HMI screen is showing, so VNC is the only way to see it. It is a picture, not data: nothing is parsed from it yet (reading numbers from the picture by OCR is a possible later step, see RESEARCH_ANGLES.md).
+- Limits: the panel allows a limited number of VNC clients; a second viewer may be refused. Frame age is not synchronised with the Modbus samples, so do not use VNC frames for timing measurements.
+- Status on 2026-11-20: connected and viewed with the real HMI; the address, port and whether a password was needed on the day are not recorded here. Write them in the test log (HARDWARE_TEST_PLAN.md) when you repeat it.
+
+## Reading the PLC with pymodbus (what was done on 2026-11-20)
+- Library: `pymodbus` 3.16.2, Modbus TCP client, unit (station) 1, port 502. Reads only: `read_coils`, `read_discrete_inputs`, `read_holding_registers`. `live/plc_reader.py` has no write method.
+- Poll plan: `DEFAULT_PLAN` in `live/plc_reader.py` (I, Q, M10..53 bits, V1000.., V2000.., V2300..2427 taught data, V2490.., `%MD600` as 64 coils), 10 Hz by default (`--plc-hz`). Values are mirrored into a `twin.il.Memory`, so the HMI replica, the ghost arm and the ladder viewer use the same code as for the simulation.
+- Result: V offset 100 verified (`%VD2020`, `%VD2030`); M-area offset 320, `%MD600`, `%VD1044` and the cycle counters still need a non-zero value on the real machine (see the top of this file). Tomorrow's checklist: HARDWARE_TEST_PLAN.md.
+- The pose shown for the real arm comes from encoder counts `%MD600` (base) and `%VD1044` (shoulder), converted with the ratios in `twin/config.py`.
+
 ## Offline / development
 - `python run_twin.py --modbus-serve 1502` exposes the twin as a read-only Modbus TCP server with the same mapping; point `--plc 127.0.0.1:1502` of a second instance at it, or use any Modbus client.
 - Tests: `python run_tests.py`.

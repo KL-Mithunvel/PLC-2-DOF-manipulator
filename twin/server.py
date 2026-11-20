@@ -216,7 +216,7 @@ def make_handler(hub: Hub):
 
 
 def run(host: str = "127.0.0.1", port: int = 8765, persist: bool = True, open_browser: bool = False,
-        hub_setup=None) -> None:
+        hub_setup=None, query: str = "") -> None:
     twin = Twin(persist=persist)
     hub = Hub(twin)
     if hub_setup:
@@ -235,7 +235,7 @@ def run(host: str = "127.0.0.1", port: int = 8765, persist: bool = True, open_br
     print(f"Digital twin running at {url}   (Ctrl+C to stop)")
     if open_browser:
         import webbrowser
-        webbrowser.open(url)
+        webbrowser.open(url + query)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

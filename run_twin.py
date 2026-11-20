@@ -1,6 +1,7 @@
 """Start the PLC + HMI + arm digital twin.
 
   python run_twin.py [--port 8765] [--no-browser] [--fresh]
+  python run_twin.py --demo                         showcase: loops the auto cycle by itself, no hardware
   python run_twin.py --modbus-serve 1502            expose the twin's memory as a Modbus TCP server (reads only)
   python run_twin.py --plc 192.168.0.252[:502]      add the REAL PLC as a read-only live source ("plc", shown as the ghost arm)
   python run_twin.py --hmi-vnc 192.168.0.253[:5900]   show the REAL HMI (view-only VNC) next to the replica; password via HMI_VNC_PASSWORD
@@ -15,6 +16,7 @@ from twin.server import run
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("--host", default="127.0.0.1")
 ap.add_argument("--port", type=int, default=8765)
+ap.add_argument("--demo", action="store_true", help="showcase mode: the page runs the 3-cycle program in a loop by itself (no hardware needed)")
 ap.add_argument("--no-browser", action="store_true")
 ap.add_argument("--fresh", action="store_true", help="ignore saved retentive data (taught points)")
 ap.add_argument("--modbus-serve", type=int, metavar="PORT", help="serve the twin memory over Modbus TCP on this port")
@@ -59,4 +61,4 @@ def setup(hub):
             hub.register("sensors", SensorSource.from_spec(a.sensors, hub.twin).start())
 
 
-run(a.host, a.port, persist=not a.fresh, open_browser=not a.no_browser, hub_setup=setup)
+run(a.host, a.port, persist=not a.fresh, open_browser=not a.no_browser, hub_setup=setup, query="?demo=1" if a.demo else "")

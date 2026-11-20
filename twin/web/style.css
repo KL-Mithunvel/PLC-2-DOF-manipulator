@@ -78,7 +78,12 @@ table.dt td.n{text-align:right;font-variant-numeric:tabular-nums;font-family:Con
 footer{padding:0 12px 14px}#logbox{font:12px Consolas,monospace;color:var(--dim);background:#0c1117;border:1px solid var(--line);border-radius:6px;padding:6px 10px;height:112px;overflow:hidden;white-space:pre}
 
 #ladderDiag{height:420px;overflow:auto;background:#0f161d;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
-#ladderDiag .net{overflow:visible}.dscroll{overflow-x:auto;overflow-y:hidden;padding-bottom:4px}
+#ladderDiag{cursor:grab;scrollbar-width:auto;scrollbar-color:#4a6580 #0b1118;overscroll-behavior:contain}#ladderDiag.panning{cursor:grabbing;user-select:none}
+#ladderDiag .net{overflow:visible;width:max-content;min-width:100%}#ladderDiag .nethead{position:sticky;left:0;width:max-content}
+#ladderDiag::-webkit-scrollbar,#ladder::-webkit-scrollbar{width:14px;height:14px}#ladderDiag::-webkit-scrollbar-thumb{background:#4a6580;border-radius:7px;border:3px solid #0f161d}#ladderDiag::-webkit-scrollbar-track{background:#0b1118}
+#ladderDiag.tall,#ladder.tall{height:calc(100vh - 170px)}
+#tab-ladder:fullscreen{background:var(--bg);padding:10px;overflow:auto}#tab-ladder:fullscreen #ladderDiag,#tab-ladder:fullscreen #ladder{height:calc(100vh - 80px)}
+.lzoom{display:inline-flex;gap:4px;align-items:center}.lzoom b{min-width:46px;text-align:center;color:var(--txt)}.tabbar{flex-wrap:wrap}.tabbar button.on{background:var(--acc);color:#001;border-color:var(--acc)}
 #ladderDiag svg{display:block;font:11px Consolas,monospace}
 svg .lw,svg .cb{stroke:#4b5967;stroke-width:1.6;fill:none}svg .rail{fill:#4b5967}svg .cb.box{fill:#16212c}svg .cb.fill{fill:#16212c}
 svg .lt{fill:#9fb0c0;stroke:none}svg .lt.in{fill:#c6d3df}
@@ -92,3 +97,9 @@ svg .el.act .cb{stroke:var(--warn)}svg .el.act .cb.box,svg .el.act .cb.fill{fill
 #realHmiWrap{width:100%;aspect-ratio:1024/600;background:#000;border:6px solid #050505;border-radius:10px;overflow:hidden}
 #hmiReal{width:100%;height:100%;display:block}
 #taughtTable table{border-collapse:collapse;width:100%}#taughtTable th,#taughtTable td{border-bottom:1px solid #2a3846;padding:2px 6px;text-align:right}#taughtTable th:first-child,#taughtTable td:first-child{text-align:left}
+
+/* ---------- 3D view toolbar ---------- */
+#viewBar{position:absolute;left:8px;top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:calc(100% - 220px);padding:4px;background:#0b1118cc;border:1px solid var(--line);border-radius:7px}
+#viewBar button{padding:3px 8px;font-size:12px}#viewBar button.on{background:var(--acc);color:#001;border-color:var(--acc)}#viewBar .sep{width:1px;height:18px;background:var(--line);margin:0 3px}
+#viewWrap.tall{height:min(78vh,820px)}#viewWrap:fullscreen{height:100vh;background:var(--bg)}#viewWrap:fullscreen #viewInfo{font-size:14px}
+#demoBadge{position:fixed;right:14px;bottom:14px;z-index:50;background:#102a44;border:1px solid var(--acc);color:#cfe6ff;padding:6px 12px;border-radius:16px;font-size:12px;pointer-events:none;box-shadow:0 2px 10px #0008}

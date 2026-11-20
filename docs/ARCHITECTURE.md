@@ -37,7 +37,7 @@ Sources other than the simulation (live PLC, mocap, sensors) are optional plug-i
 | `twin/server.py` | `Hub` (sources, recorders, replay) and the HTTP/SSE server. |
 | `twin/modbus_server.py` | Exposes the twin's memory as a read-only Modbus TCP server using the real Kinco address map. |
 | `twin/web/` | UI: `index.html`, `app.js` (HMI, panels, tabs, graphs), `arm3d.js` + `view3d.js` + `ghost3d.js` (three.js), `ladder.js` (ladder diagram), `vendor/` (three.js 0.160, OrbitControls, GLTFLoader). |
-| `live/` | `plc_reader.py` (read-only pymodbus client + source), `modbus_map.py`, `scan.py` (find offsets), `sensors.py` (UDP/serial sensor input). |
+| `live/` | `plc_reader.py` (read-only pymodbus client + source), `modbus_map.py`, `scan.py` (find offsets), `hmi_vnc.py` (view-only VNC picture of the real HMI, served at `/api/hmi.png`), `sensors.py` (UDP/serial sensor input). |
 | `mocap/` | `geometry.py` (marker layout, transforms), `tracker.py`, `calibrate.py`, `placement.py`, `synth.py` (rendered test images), `source.py`. |
 | `tools/` | `calibrate_cycle`, `fit_motor_params`, `import_cad` (+ `meshio`), `make_tags`, `compare_runs`, `mocap_demo`, `sim_sensors`. |
 
