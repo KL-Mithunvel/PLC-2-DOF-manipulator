@@ -87,4 +87,7 @@ svg .el.act .cb{stroke:var(--warn)}svg .el.act .cb.box,svg .el.act .cb.fill{fill
 
 /* HMI replica mirroring the live PLC */
 #hmi.mirror { outline: 3px solid #4ae0ff; outline-offset: -3px; }
-#hmi.mirror .hmi-ni, #hmi.mirror .hmi-btn, #hmi.mirror .hmi-sw { pointer-events: none; }
+#hmi.mirror .hmi-ni, #hmi.mirror .hmi-btn:not(.nav), #hmi.mirror .hmi-sw { pointer-events: none; }
+#hmiOverlay{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;opacity:0}
+#realHmiWrap{width:100%;aspect-ratio:1024/600;background:#000;border:6px solid #050505;border-radius:10px;overflow:hidden}
+#hmiReal{width:100%;height:100%;display:block}

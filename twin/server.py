@@ -35,6 +35,7 @@ class Hub:
         self._log_dir = log_dir
         self.replay = ReplaySource(log_dir)
         self.live: dict[str, object] = {}       # name -> object with snapshot()/status()/control()
+        self.hmi_vnc = None                     # optional live.hmi_vnc.HmiVnc: view-only grab of the real HMI panel
         self._last_wall = time.perf_counter()
 
     def register(self, name: str, source) -> None:
@@ -82,6 +83,7 @@ class Hub:
                        "pos": self.replay.pos, "duration": self.replay.duration},
             "logs": list_logs(self.recorder.dir),
             "live": {k: v.status() for k, v in self.live.items()},
+            "hmi_vnc": self.hmi_vnc.status() if self.hmi_vnc else None,
         }
 
     def command(self, c: dict) -> dict:
@@ -150,6 +152,17 @@ def make_handler(hub: Hub):
             if path == "/api/watch":
                 with twin.lock:
                     return self._json(twin.plc.vm.operand_values())
+            if path == "/api/hmi.png":
+                png = hub.hmi_vnc.png if hub.hmi_vnc else None
+                if not png:
+                    return self.send_error(404)
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(png)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(png)
+                return
             if path == "/api/stream":
                 self.send_response(200)
                 self.send_header("Content-Type", "text/event-stream")

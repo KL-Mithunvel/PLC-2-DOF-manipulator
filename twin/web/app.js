@@ -505,6 +505,23 @@ function updateSources(s) {
   $("#liveSrc").innerHTML = Object.keys(HUB.live).length ? Object.entries(HUB.live).map(([k, v]) => `<div><b>${k}</b>: <span class="tag ${v.connected ? "on" : "warn"}">${v.connected ? "connected" : "not connected"}</span> ${v.info || ""}</div>`).join("") : $("#liveSrc").innerHTML;
 }
 
+/* ---- real HMI (view-only VNC grab served by the twin at /api/hmi.png), optional overlay on the replica ---- */
+let realHmiTimer = null;
+function updateRealHmi() {
+  const on = HUB && HUB.hmi_vnc;
+  $("#realHmiCard").style.display = on ? "" : "none";
+  if (!on) return;
+  $("#realHmiInfo").textContent = "VNC, view only: " + (HUB.hmi_vnc.connected ? HUB.hmi_vnc.info : "not connected (" + HUB.hmi_vnc.info + ")");
+  if (!realHmiTimer) realHmiTimer = setInterval(() => {
+    const u = "/api/hmi.png?t=" + Date.now();
+    $("#hmiReal").src = u; $("#hmiOverlay").src = u;
+  }, 500);
+}
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "rngOverlay") return;
+  const v = e.target.value / 100; $("#hmiOverlay").style.display = v ? "block" : "none"; $("#hmiOverlay").style.opacity = v;
+});
+
 /* ===================================================================== main loop */
 let frame = 0;
 function render() {
@@ -544,6 +561,7 @@ function render() {
     if (frame % 6 === 0 && $("#tab-scope").classList.contains("on")) drawScope();
     if (frame % 6 === 0 && $("#tab-struct").classList.contains("on")) { drawStruct(); updateStructCards(s); }
   }
+  if (frame % 30 === 0) updateRealHmi();
   if (S && frame % 10 === 0 && $("#tab-src").classList.contains("on")) updateSources(S);
   requestAnimationFrame(render);
 }

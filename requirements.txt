@@ -2,6 +2,7 @@
 # Optional parts:
 pymodbus>=3.6        # live PLC reader (live/)
 pyserial>=3.5        # motor-sensor serial input (live/sensors.py)
+vncdotool>=1.2        # view-only grab of the real HMI panel (live/hmi_vnc.py)
 opencv-contrib-python>=4.8   # motion capture (mocap/)
 numpy>=1.26
 pypdf>=4.0           # only for reading the repo PDFs

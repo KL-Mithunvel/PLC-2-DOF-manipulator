@@ -33,7 +33,12 @@
     <div class="card">
       <div class="cardhead">HMI &nbsp;<small>Kinco M2070HE-WIFI, 1024x600 &middot; Modbus TCP to PLC 192.168.0.252:502</small>
         <select id="selHmiScreen" style="float:right" title="Wi-Fi and Login are system windows of the panel, shown for reference"><option value="AUTO">Auto</option><option value="MANUAL">Manual</option><option value="SETTING">Setting</option><option value="WIFI">Wi-Fi / network (system)</option><option value="LOGIN">Login (system)</option></select></div>
-      <div id="hmiWrap"><div id="hmi"></div></div>
+      <div id="hmiWrap"><div id="hmi"></div><img id="hmiOverlay" alt="" style="display:none"></div>
+    </div>
+    <div class="card" id="realHmiCard" style="display:none">
+      <div class="cardhead">Real HMI &nbsp;<small id="realHmiInfo">VNC, view only</small>
+        <span style="float:right">overlay on replica <input type="range" id="rngOverlay" min="0" max="100" value="0" style="width:120px;vertical-align:middle"></span></div>
+      <div id="realHmiWrap"><img id="hmiReal" alt="real HMI (VNC)"></div>
     </div>
     <div class="card" id="panelCard">
       <div class="cardhead">Operator panel &amp; PLC I/O</div>
