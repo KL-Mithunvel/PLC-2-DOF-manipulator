@@ -152,10 +152,15 @@ class PlcLiveSource:
         b = c.base.count_to_angle(m.read("MD600")) * 180 / 3.141592653589793
         s = c.shoulder.count_to_angle(m.read("VD1044")) * 180 / 3.141592653589793
         keys = ("M20.1", "M20.2", "M20.3", "M20.4", "M20.5", "M30.0", "M30.1", "M30.2", "M30.6", "M40.0", "M50.0", "M50.1")
+        reg_keys = (["MD600", "VD1044", "VD2020", "VD2030", "VW2036", "VW2400", "VW2500", "VW2510"]
+                    + [f"VD{2300 + 4 * i}" for i in range(5)] + [f"VD{2400 + 4 * i}" for i in range(5)])
         extra = {
             "io": {"I0.0": m.read("I0.0"), "I0.1": m.read("I0.1"), "Q0.7": m.read("Q0.7")},
             "bits": {k: m.read(k) for k in keys},
-            "regs": {k: m.read(k) for k in ("MD600", "VD1044", "VD2020", "VD2030", "VW2036", "VW2400", "VW2500", "VW2510")},
+            "regs": {k: m.read(k) for k in reg_keys},
+            # what the HMI replica shows: C3/C4 are mirrored to VW2500 (min) / VW2510 (sec) by the PLC program
+            "hmi": {"cyc_min": m.read("VW2500"), "cyc_sec": m.read("VW2510"), "magnet_sw": m.read("M20.5")},
+            "cycle_reg": "VW2400",
             "live": {"age_s": time.time() - self._last_t, "poll_ms": self.last_ms, "polls": self.polls},
         }
         snap = pose_snapshot("plc", c, b, s, t=time.time(), magnet=bool(m.read("Q0.7")), extra=extra)

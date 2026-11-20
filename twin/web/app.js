@@ -522,7 +522,10 @@ function render() {
     const L = (id, v) => $(id).classList.toggle("on", !!v);
     L("#ledI00", s.io["I0.0"]); L("#ledI01", s.io["I0.1"]); L("#ledQ07", s.io["Q0.7"]); L("#ledM301", s.bits["M30.1"]);
     L("#ledM400", s.bits["M40.0"]); L("#ledM500", s.bits["M50.0"]); L("#ledM501", s.bits["M50.1"]);
-    if (frame % 2 === 0) bind.forEach((b) => b.fn(s));
+    // HMI replica mirrors the real PLC (read-only) while the ghost source is the live PLC; otherwise it shows the simulation
+    const mirror = s.ghost && s.ghost.source === "plc" && s.ghost.regs && s.ghost.hmi;
+    $("#hmi").classList.toggle("mirror", !!mirror);
+    if (frame % 2 === 0) bind.forEach((b) => b.fn(mirror ? { ...s, regs: s.ghost.regs, bits: { ...s.bits, ...s.ghost.bits }, hmi: { ...s.hmi, ...s.ghost.hmi }, cycle_reg: s.ghost.cycle_reg } : s));
     drawScene(cvTop, "top"); drawScene(cvSide, "side");
     const ld = s.load;
     $("#viewInfo").innerHTML = `payload on magnet: <b>${ld.payload_kg.toFixed(1)} kg</b> &nbsp;|&nbsp; shoulder gravity torque ${ld.t_grav.toFixed(1)} N&middot;m (unloaded ${ld.t_grav_unloaded.toFixed(1)}) &nbsp;|&nbsp; J<sub>sh</sub> ${ld.j_shoulder.toFixed(2)} &nbsp; J<sub>base</sub> ${ld.j_base.toFixed(2)} kg&middot;m&sup2;`;
