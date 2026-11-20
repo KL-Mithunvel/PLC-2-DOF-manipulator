@@ -32,6 +32,7 @@ Taken from the Kinco K-series manual, section 10.2.2.3 (page 483): coils/discret
 3. Common data bus (JSON snapshots over SSE): sources `sim`, `plc`, `mocap`, `sensors`. The three.js arm gets a **shadow mode** driven by the real encoder counts, shown next to the simulated arm with an error overlay.
 
 ## Motor current and voltage sensors
+Detailed plan with shop options and prices: [POWER_METER_PLAN.md](POWER_METER_PLAN.md).
 Separate sensor per motor (stated 2026-11-19). Purpose:
 - calibrate the twin's assumed `kt`, gear efficiency and friction (`twin/config.py`)
 - cross-check drive-reported current (object 6078; currently mapped for node 1 only, `%VW1022`)
