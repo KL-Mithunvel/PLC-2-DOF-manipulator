@@ -242,7 +242,8 @@ function drawScene(cv, kind) {
   c.stroke(); c.setLineDash([]); c.restore();
   // taught points
   const names = ["INI", "1", "2 PICK", "3", "4 DROP"];
-  S.points.forEach((pt, i) => { const q = P([pt[0], pt[1], pt[2]]); c.fillStyle = i === 2 ? "#ff4bd8" : i === 4 ? "#ffb020" : "#5f7a94"; c.beginPath(); c.arc(q[0], q[1], 3.5, 0, 7); c.fill(); if (kind !== "side") { c.font = "10px Segoe UI"; c.fillText(names[i], q[0] + 6, q[1] - 5); } });
+  const realPts = S.ghost && S.ghost.source === "plc" && S.ghost.taught ? S.ghost.taught.map((t) => t.tip || null) : null;   // taught points of the REAL PLC while it is the ghost
+  (realPts || S.points).forEach((pt, i) => { if (!pt) return; const q = P([pt[0], pt[1], pt[2]]); c.fillStyle = i === 2 ? "#ff4bd8" : i === 4 ? "#ffb020" : "#5f7a94"; c.beginPath(); c.arc(q[0], q[1], 3.5, 0, 7); c.fill(); if (kind !== "side") { c.font = "10px Segoe UI"; c.fillText(names[i], q[0] + 6, q[1] - 5); } });
   // tip trail
   if (trail.length > 1) { c.strokeStyle = "#ffb02066"; c.lineWidth = 1.5; c.beginPath(); trail.forEach((p, i) => { const q = P(p); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); }); c.stroke(); }
   // structure
@@ -507,6 +508,17 @@ function updateSources(s) {
 
 /* ---- real HMI (view-only VNC grab served by the twin at /api/hmi.png), optional overlay on the replica ---- */
 let realHmiTimer = null;
+/* taught points stored in the real PLC vs where the real arm is now (ghost = live encoders): the check that the model matches the machine */
+function updateTaught() {
+  const el = $("#taughtTable"), g = S && S.ghost;
+  if (!el) return;
+  if (!g || g.source !== "plc" || !g.taught) { el.innerHTML = "<i>set the ghost source to <b>plc</b> (Data sources tab) to compare the real arm with the taught points</i>"; return; }
+  const tip = g.geom.tip, d = g.taught.map((t) => t.tip ? Math.hypot(...tip.map((v, i) => (v - t.tip[i]) * 1000)) : Infinity);
+  const near = d.indexOf(Math.min(...d));   // Infinity = not taught
+  el.innerHTML = `<table><tr><th>point</th><th>base (cnt)</th><th>shoulder (cnt)</th><th>base&deg;</th><th>shoulder&deg;</th><th>arm to point</th></tr>` +
+    g.taught.map((t, i) => `<tr${i === near && d[i] < 15 ? ' style="color:#4ae0ff;font-weight:bold"' : ""}><td>${t.name}</td><td>${t.base_count}</td><td>${t.sh_count}</td><td>${t.taught ? t.base_deg.toFixed(1) : "&mdash;"}</td><td>${t.taught ? t.sh_deg.toFixed(1) : "&mdash;"}</td><td>${t.taught ? d[i].toFixed(0) + " mm" + (i === near && d[i] < 15 ? " &#9679; at point" : "") : "not taught"}</td></tr>`).join("") +
+    `</table><div style="color:var(--dim)">live arm: base ${g.base.deg.toFixed(1)}&deg; shoulder ${g.shoulder.deg.toFixed(1)}&deg; (counts ${g.base.count}, ${g.shoulder.count})</div>`;
+}
 function updateRealHmi() {
   const on = HUB && HUB.hmi_vnc;
   $("#realHmiCard").style.display = on ? "" : "none";
@@ -562,6 +574,7 @@ function render() {
     if (frame % 6 === 0 && $("#tab-struct").classList.contains("on")) { drawStruct(); updateStructCards(s); }
   }
   if (frame % 30 === 0) updateRealHmi();
+  if (frame % 6 === 0) updateTaught();
   if (S && frame % 10 === 0 && $("#tab-src").classList.contains("on")) updateSources(S);
   requestAnimationFrame(render);
 }

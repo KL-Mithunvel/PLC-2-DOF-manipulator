@@ -161,12 +161,26 @@ class PlcLiveSource:
             # what the HMI replica shows: C3/C4 are mirrored to VW2500 (min) / VW2510 (sec) by the PLC program
             "hmi": {"cyc_min": m.read("VW2500"), "cyc_sec": m.read("VW2510"), "magnet_sw": m.read("M20.5")},
             "cycle_reg": "VW2400",
+            "taught": self._taught(),
             "live": {"age_s": time.time() - self._last_t, "poll_ms": self.last_ms, "polls": self.polls},
         }
         snap = pose_snapshot("plc", c, b, s, t=time.time(), magnet=bool(m.read("Q0.7")), extra=extra)
         snap["base"].update({"count": m.read("MD600")})
         snap["shoulder"].update({"count": m.read("VD1044")})
         return snap
+
+    def _taught(self) -> list[dict]:
+        """The taught points as stored in the real PLC (INIT, 1..4: base %VD2300+4i, shoulder %VD2400+4i) with their tip position."""
+        c, m, out = self.cfg, self.mem, []
+        for i, name in enumerate(("INI", "1", "2 PICK", "3", "4 DROP")):
+            bc, sc = m.read(f"VD{2300 + 4 * i}"), m.read(f"VD{2400 + 4 * i}")
+            if bc == 0 and sc == 0:                      # never taught (0/0 is not a pose): no angles, nothing to draw
+                out.append({"name": name, "taught": False, "base_count": 0, "sh_count": 0})
+                continue
+            bd, sd = c.base.count_to_angle(bc) * 180 / 3.141592653589793, c.shoulder.count_to_angle(sc) * 180 / 3.141592653589793
+            tip = pose_snapshot("plc", c, bd, sd)["geom"]["tip"]
+            out.append({"name": name, "taught": True, "base_count": bc, "sh_count": sc, "base_deg": bd, "sh_deg": sd, "tip": tip})
+        return out
 
     def status(self) -> dict:
         info = f"{self.host}:{self.port} polls={self.polls} {self.last_ms:.0f} ms" if self.connected else (self.error or "idle")
