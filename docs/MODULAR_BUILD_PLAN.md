@@ -68,6 +68,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Gate.** Detection delay and false-alarm rate measured on synthetic data and written down.
 
 ## Stage 5 - Shadow engine (conformance, A1/A3/A5/A6)
+**Status 2026-11-20: built and tested on synthetic recordings** (ladder conformance in two modes, open-loop arm comparison, timing and conformance alarms, CLI, seeded faults detected). Not yet run on a real recording; see [SHADOW.md](SHADOW.md) for results and limits.
 **Interface.** Takes real input snapshots (I bits, HMI-written M/V, encoders), drives a second twin instance with them, outputs twin snapshots aligned with the real ones for stage 4.
 - **Offline first.** Runs on a recorded bag (stage 1), so it can be developed and re-run without the arm.
 - Signals compared: Q bits, M step flags, drive words, joint positions, tip, per-phase durations.

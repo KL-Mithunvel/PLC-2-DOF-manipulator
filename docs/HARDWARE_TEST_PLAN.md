@@ -11,6 +11,11 @@ Prepared 2026-11-20 for the first full session with the real arm. Everything her
 - [ ] Start: `python run_twin.py --plc 192.168.0.252 --hmi-vnc 192.168.0.253`; open `http://127.0.0.1:8765/?ghost=plc`. Check the **Data sources -> Pipeline diagnostics** table: fast group about 10 Hz, errors 0, data age under 1 s.
 - [ ] To record a run: type a run name and notes in **Session recording** and press **Record session** (or start with `--record R3 --notes "..." --payload-kg 5`). One bag file per run in `logs/`; check it afterwards with `python -m bag info logs/R3.mcap` (topics `twin/state`, `plc/decoded`, `plc/raw`, `diag`, `events`, `hmi/frame` should all be present).
 
+## Recommended settings for the recording runs
+- Start with `--plc-hz 25` (fast group) if the diagnostics table shows the link keeps up (achieved rate near 25 Hz, errors 0, poll mean well under 40 ms); otherwise use the highest rate that is stable. A fast poll is what lets the shadow engine follow one-scan events.
+- Start each recording with the machine idle and homed (the shadow engine's timers start at the first record).
+- After a run: `python -m shadow report logs/R3.mcap` (ladder conformance) and `python -m shadow report logs/R3.mcap --mode open` (twin vs real arm). Keep the printed report with the session log.
+
 ## Checks (record the value seen on the HMI next to what the twin shows)
 1. **Verify the mapping.** Type distinctive values on the HMI (speeds `VD2020`, `VD2030`; cycle target `VW2036`); run `python -m live.scan --host 192.168.0.252 --know VD2020=<v> --know VW2036=<v>`. Expect V offset 100 (already confirmed).
 2. **M area and encoders.** While the arm is at rest and then moving: `%MD600` (base), `%VD1044` (shoulder) change; check sign and scale against the visible arm angle. Confirm M-area offset 320 with a known bit (for example the magnet switch or a teach flag).

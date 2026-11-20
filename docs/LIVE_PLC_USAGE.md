@@ -30,7 +30,7 @@ Network: the PC needs a static IP on the PLC's subnet that is **not** the PLC's 
 4. Record (Data sources tab) while running the real arm, then compare runs offline (`tools/compare_runs.py`).
 
 ## Diagnostics, raw blocks and session recording (stage 2, 2026-11-20)
-- **Two poll groups** at their own rates: fast (I, Q, M bits, `%MD600`, `%VD1044`; `--plc-hz`, default 10) and slow (taught data, speeds, counters; `--plc-slow-hz`, default 1). `check_plan()` proves no double word is split across requests.
+- **Two poll groups** at their own rates: fast (I, Q, M bits, `%MD600` and the whole CANopen PDO area V1000..V1063 with the drive status words and `%VD1044`; `--plc-hz`, default 10, use 25 for shadow/conformance runs) and slow (taught data, speeds, counters; `--plc-slow-hz`, default 1). `check_plan()` proves no double word is split across requests.
 - **Diagnostics** per source, shown in the **Data sources** tab ("Pipeline diagnostics") and written to the `diag` bag topic: achieved rate, poll time mean/p95/max, jitter, errors, reconnects, data age, last error. The real-HMI picture age is listed too.
 - **Raw blocks**: every Modbus reply is recorded with its send and receive times in the `plc/raw` topic, so a recording can be re-analysed (rebuild the memory with `live.raw.apply_record`). Format: [BAG_FORMAT.md](BAG_FORMAT.md).
 - **Connection events** (connected, error, reconnect) go to the `events` topic. After an error the reader waits 2 s and reconnects by itself.

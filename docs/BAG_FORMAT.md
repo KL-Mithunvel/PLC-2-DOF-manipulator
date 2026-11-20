@@ -40,7 +40,7 @@ A bag is a recording of one session: timestamped messages on named topics, plus 
 `polls`, `errors`, `reconnects`, `last_error`, `age_s` (time since the last good poll), `uptime_s`, `groups.{fast,slow}` with `rate_hz`, `jitter_ms` (std of the start-to-start period), `period_ms` and `cycle_ms` (each `n, mean, p50, p95, max, min, std` over the last 200 polls), `blocks.<kind:area+byte>` (round-trip ms per request). The `hub` entry has `step_ms`: the period of the Hub loop itself (shows how loaded the PC is).
 
 ## Poll groups and torn reads
-The PLC reader polls two groups at their own rates: **fast** (I, Q, M10..53 bits, `%MD600` as 64 coils, `%VD1044`) at `--plc-hz` (default 10) and **slow** (V1000.., V2000.., taught data V2300.., V2490..) at `--plc-slow-hz` (default 1). A 32-bit value could be torn if its two halves arrived in different requests; `live.plc_reader.check_plan()` verifies that every double word the program uses sits inside one request (tested). Different values in one poll are NOT sampled at the same instant: use the per-block `t0`/`t1`.
+The PLC reader polls two groups at their own rates: **fast** (I, Q, M10..53 bits, `%MD600` as 64 coils, the whole PDO area `V1000..V1063`) at `--plc-hz` (default 10) and **slow** (V2000.., taught data V2300.., V2490..) at `--plc-slow-hz` (default 1). A 32-bit value could be torn if its two halves arrived in different requests; `live.plc_reader.check_plan()` verifies that every double word the program uses sits inside one request (tested). Different values in one poll are NOT sampled at the same instant: use the per-block `t0`/`t1`.
 
 ## Reading in code
 ```python

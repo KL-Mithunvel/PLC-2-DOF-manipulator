@@ -28,10 +28,9 @@ FAST = [
     ("coil", "Q", 0, 2),
     ("coil", "M", 10, 44),
     ("wordbits", "M", 600, 8),          # %MD600 (base position): the M area is bit-only on the PLC, read as 64 coils
-    ("word", "V", 1044, 4),             # %VD1044 (shoulder position)
+    ("word", "V", 1000, 64),            # the whole CANopen PDO area: control/status words, targets, positions (%VD1044 shoulder), velocities
 ]
 SLOW = [
-    ("word", "V", 1000, 64),
     ("word", "V", 2000, 42),
     ("word", "V", 2300, 128),
     ("word", "V", 2490, 40),
