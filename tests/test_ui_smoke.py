@@ -68,9 +68,11 @@ class UiSmoke(unittest.TestCase):
         self.assertIn('id="selJump"', dom)
 
     def test_tabs_load_without_errors(self):
-        for tab, needle in (("struct", "reaction bending moment"), ("cfg", "timer_base_ms"), ("src", "Recorder"), ("mem", "Bit memory"), ("can", "COB-ID")):
+        for tab, needle in (("struct", "reaction bending moment"), ("cfg", "timer_base_ms"), ("src", "Recorder"), ("mem", "Bit memory"), ("can", "COB-ID"), ("shadow", "Run shadow")):
             dom, errs = self.load(f"?snap&tab={tab}")
             self.assertEqual(errs, [], tab)
+            if tab == "shadow":
+                self.assertIn("Run shadow", dom)
             if tab in ("cfg", "src", "mem", "can"):
                 self.assertIn(needle, dom, tab)
 

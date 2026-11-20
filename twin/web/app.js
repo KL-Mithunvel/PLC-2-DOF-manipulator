@@ -189,6 +189,7 @@ document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
     if (b.dataset.tab === "ladder") updateLadder(S);
   }
   if (b.dataset.tab === "src") { if (!srcBuilt) buildSources(); }
+  if (b.dataset.tab === "shadow") updateShadowTab();
 });
 
 /* ===================================================================== arm renderer */
@@ -635,6 +636,7 @@ function render() {
   if (frame % 30 === 0) updateRealHmi();
   if (frame % 6 === 0) updateTaught();
   if (S && frame % 10 === 0 && $("#tab-src").classList.contains("on")) updateSources(S);
+  if (S && frame % 20 === 0 && $("#tab-shadow").classList.contains("on")) updateShadowTab();
   requestAnimationFrame(render);
 }
 let ES = null, SRC = "sim", GHOST = (/[?&]ghost=(\w+)/.exec(location.search) || [])[1] || "none", HUB = null;   // ?ghost=plc starts mirroring the live PLC
@@ -682,4 +684,75 @@ if (/[?&]demo=1/.test(location.search)) {
       await sleep(1500);
     }
   })();
+}
+
+
+/* ================================================================== Shadow tab: shadow a recorded bag against the twin, show the divergence */
+let shadowBuilt = false, shadowPoll = null, SHADOW = null;
+function buildShadow() {
+  shadowBuilt = true;
+  $("#shadowView").innerHTML = `
+  <div class="tabbar" style="margin-bottom:8px">
+    <label>recording <select id="shLog" style="min-width:260px"></select></label>
+    <label>mode <select id="shMode"><option value="ladder">ladder conformance</option><option value="open">open loop (twin vs real arm)</option></select></label>
+    <label><input type="checkbox" id="shResync" checked> one-step-ahead (resync each poll)</label>
+    <label>warm-up <input type="number" id="shWarm" value="3" min="0" step="0.5" style="width:56px"> s</label>
+    <button id="shRun">Run shadow</button><span id="shState" style="color:var(--dim)"></span>
+  </div>
+  <p style="color:var(--dim);margin:0 0 8px">Replays what the recording's real PLC saw (inputs, HMI actions, drive feedback) into a second twin and compares what the twin computes with what the real machine did. Needs a bag with <code>plc/raw</code> (record with <code>--plc HOST</code>, or <code>python -m shadow synth</code> for a synthetic one). Details and limits: <code>docs/SHADOW.md</code>.</p>
+  <div style="display:grid;grid-template-columns:minmax(360px,38%) 1fr;gap:12px"><div id="shText" style="font:12px Consolas,monospace;white-space:pre;overflow:auto;max-height:430px;background:#0f161d;border:1px solid var(--line);border-radius:6px;padding:6px 8px"></div>
+  <canvas id="cvShadow" style="width:100%;height:430px;background:#0b1118;border-radius:6px"></canvas></div>`;
+  if (location.search.includes("snap")) setTimeout(pollShadow, 300);      // screenshot mode: show the last result straight away
+  $("#shRun").onclick = () => {
+    const f = $("#shLog").value; if (!f) return;
+    post({ type: "shadow_run", file: f, mode: $("#shMode").value, resync: $("#shResync").checked, warmup: +$("#shWarm").value });
+    $("#shState").textContent = " running...";
+    clearInterval(shadowPoll); shadowPoll = setInterval(pollShadow, 700);
+  };
+}
+function updateShadowTab() {
+  if (!shadowBuilt) buildShadow();
+  const l = $("#shLog"); if (HUB && document.activeElement !== l && l.options.length !== HUB.logs.length) l.innerHTML = HUB.logs.map((f) => `<option>${f}</option>`).join("");
+  if (HUB && HUB.shadow && HUB.shadow.state === "done" && !SHADOW) pollShadow();
+}
+async function pollShadow() {
+  const r = await fetch("/api/shadow", { cache: "no-store" }).then((x) => x.json()).catch(() => null);
+  if (!r) return;
+  if (r.state === "running") { $("#shState").textContent = ` running ${r.file} (${r.mode})...`; return; }
+  clearInterval(shadowPoll); shadowPoll = null;
+  if (r.state === "error") { $("#shState").textContent = " error"; $("#shText").textContent = r.error; SHADOW = null; drawShadow(); return; }
+  if (r.state !== "done") return;
+  SHADOW = r; $("#shState").textContent = ` done in ${r.seconds} s`; $("#shText").textContent = r.text; drawShadow();
+}
+function drawShadow() {
+  const cv = $("#cvShadow"); if (!cv) return;
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.scale(dpr, dpr); g.clearRect(0, 0, W, H);
+  if (!SHADOW) { g.fillStyle = "#8394a7"; g.font = "13px sans-serif"; g.fillText("choose a recording and press Run shadow", 16, 28); return; }
+  const tr = SHADOW.traces, names = Object.keys(tr), T = SHADOW.duration_s || 1, L = 112, R = 10, top = 22;
+  const x = (t) => L + (t / T) * (W - L - R);
+  g.font = "11px Consolas, monospace";
+  const bits = names.filter((n) => tr[n].kind === "bit"), ang = names.filter((n) => tr[n].kind === "angle");
+  const rowH = 17, bitsH = bits.length * rowH, angH = Math.max(0, H - top - bitsH - 36);
+  g.fillStyle = "#8394a7"; g.fillText("t (s)", 4, 14);
+  for (let t = 0; t <= T; t += T > 60 ? 10 : T > 20 ? 5 : 2) { g.fillText(String(t), x(t) - 6, 14); g.strokeStyle = "#1c2733"; g.beginPath(); g.moveTo(x(t), top); g.lineTo(x(t), H - 4); g.stroke(); }
+  // bit rows: real (top half) and twin (bottom half) as strips; red = sustained mismatch span
+  bits.forEach((n, i) => {
+    const y = top + i * rowH, d = tr[n]; g.fillStyle = "#8394a7"; g.fillText(n, 4, y + 12);
+    for (const [name, off, col] of [["real", 2, "#3ddc84"], ["twin", 9, "#4aa3ff"]]) {
+      const v = d[name]; g.fillStyle = col;
+      for (let k = 0; k < d.t.length; k++) if (v[k]) g.fillRect(x(d.t[k]), y + off, Math.max(1, (x(d.t[Math.min(k + 1, d.t.length - 1)]) - x(d.t[k])) || 1), 5);
+    }
+    for (const [a, b] of (SHADOW.spans[n] || [])) { g.fillStyle = "#ff525255"; g.fillRect(x(a), y, Math.max(2, x(b) - x(a)), rowH - 1); }
+  });
+  // angle traces
+  if (ang.length) {
+    const y0 = top + bitsH + 18, h = angH - 6; let lo = 1e9, hi = -1e9;
+    ang.forEach((n) => { for (const v of [...tr[n].real, ...tr[n].twin]) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+    const yy = (v) => y0 + h - ((v - lo) / ((hi - lo) || 1)) * h;
+    ang.forEach((n, j) => { for (const [name, col, dash] of [["real", j ? "#ffb020" : "#3ddc84", []], ["twin", j ? "#ff7ad9" : "#4aa3ff", [4, 3]]]) {
+      g.strokeStyle = col; g.setLineDash(dash); g.beginPath(); tr[n].t.forEach((t, k) => { k ? g.lineTo(x(t), yy(tr[n][name][k])) : g.moveTo(x(t), yy(tr[n][name][k])); }); g.stroke(); g.setLineDash([]); } });
+    g.fillStyle = "#8394a7"; g.fillText(`angles ${lo.toFixed(0)}..${hi.toFixed(0)} deg  (solid = real, dashed = twin; ${ang.join(", ")})`, 4, y0 - 4);
+  }
+  g.fillStyle = "#8394a7"; g.fillText("green = real, blue = twin, red band = sustained mismatch", L, H - 6);
 }

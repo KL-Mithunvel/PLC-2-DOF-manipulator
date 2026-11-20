@@ -44,6 +44,7 @@ class Hub:
         self._hmi_n = -1
         self.hmi_frame_period = 2.0             # seconds between stored HMI pictures
         self.step_stats = None                  # live.diag.Rolling of the hub loop period (set lazily)
+        self.shadow: dict = {"state": "idle"}   # result of the last shadow run (see shadow_run); big, served by /api/shadow only
 
     def _new_recorder(self, directory: str):
         if self.record_format == "bag":
@@ -115,6 +116,35 @@ class Hub:
             rec.write("hmi/frame", {"n": v.frames, "t_frame_wall": v.frame_t, "bytes": len(v.png),
                                     "sha": hashlib.sha256(v.png).hexdigest()[:16], "file": rel})
 
+    # ---- shadow run on a recorded bag (GUI "Shadow" tab) ---------------------------------------------------------
+    def shadow_run(self, c: dict) -> dict:
+        if self.shadow.get("state") == "running":
+            return {"ok": False, "error": "a shadow run is already in progress"}
+        name = os.path.basename(c.get("file", ""))
+        path = os.path.join(self._log_dir, name)
+        if not name or not os.path.isfile(path):
+            return {"ok": False, "error": "no such recording"}
+        mode = c.get("mode", "ladder") if c.get("mode") in ("ladder", "open") else "ladder"
+        resync = bool(c.get("resync", True))
+        warmup = float(c.get("warmup", 3.0))
+        self.shadow = {"state": "running", "file": name, "mode": mode, "t0": time.time()}
+
+        def work():
+            try:
+                from shadow.engine import ShadowEngine, analyse, load_records, ui_payload   # lazy: the standalone twin never needs it
+                recs = load_records(path)
+                if not recs:
+                    raise ValueError("this recording has no plc/raw records (record with --plc ... or use python -m shadow synth)")
+                eng = ShadowEngine(warmup_s=warmup, resync=resync)
+                res = eng.run_ladder(recs) if mode == "ladder" else eng.run_open(recs)
+                rep = analyse(res)
+                self.shadow = {"state": "done", "file": name, "mode": mode, "resync": resync, "seconds": round(time.time() - self.shadow["t0"], 1),
+                               **ui_payload(res, rep)}
+            except Exception as exc:    # noqa: BLE001
+                self.shadow = {"state": "error", "file": name, "mode": mode, "error": f"{type(exc).__name__}: {exc}"}
+        threading.Thread(target=work, daemon=True).start()
+        return {"ok": True}
+
     def start_recording(self, name: str | None = None, meta: dict | None = None) -> dict:
         """One session file with every topic (twin state, every live source, raw PLC blocks, events, diagnostics, HMI pictures).
         Needs the bag format; with the old jsonl format each source gets its own file."""
@@ -166,10 +196,13 @@ class Hub:
             "logs": list_logs(self.recorder.dir),
             "live": {k: v.status() for k, v in self.live.items()},
             "hmi_vnc": self.hmi_vnc.status() if self.hmi_vnc else None,
+            "shadow": {k: self.shadow.get(k) for k in ("state", "file", "mode", "error", "seconds")},
         }
 
     def command(self, c: dict) -> dict:
         t = c.get("type", "")
+        if t == "shadow_run":
+            return self.shadow_run(c)
         if t == "record_all":
             return self.start_recording(c.get("name") or None, {k: c[k] for k in ("notes", "payload_kg", "operator", "run") if k in c})
         if t == "record_stop_all":
@@ -237,6 +270,8 @@ def make_handler(hub: Hub):
                     return self._json(list(twin.scope))
             if path == "/api/sources":
                 return self._json(hub.status())
+            if path == "/api/shadow":
+                return self._json(hub.shadow)
             if path == "/api/watch":
                 with twin.lock:
                     return self._json(twin.plc.vm.operand_values())

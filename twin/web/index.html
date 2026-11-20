@@ -92,6 +92,7 @@
     <button data-tab="cfg">Settings</button>
     <button data-tab="struct">Structural load</button>
     <button data-tab="src">Data sources</button>
+    <button data-tab="shadow">Shadow</button>
     <button data-tab="notes">Model &amp; findings</button>
   </nav>
   <div id="tab-ladder" class="tab on">
@@ -115,6 +116,7 @@
     <p style="color:var(--dim)">Quasi-static, linear estimate: stress and deflection of each body are scaled from the Ansys Pose A results by the live bending moment (rigid-body reaction loads, including dynamics). It is <b>not</b> a live FEA solve. The paper's own joint FOS values (9.79 / 4.63) are inconsistent with its stress plot (8.81 MPa gives FOS 28), so the scaled FOS here will be higher than the Ansys-reported minimum.</p></div>
     <canvas id="cvStruct" style="width:100%;height:420px;background:#0b1118;border-radius:6px"></canvas></div></div>
   <div id="tab-src" class="tab"><div id="srcView"></div></div>
+  <div id="tab-shadow" class="tab"><div id="shadowView"></div></div>
   <div id="tab-notes" class="tab"><div id="notes"></div></div>
 </section>
 <footer><div id="logbox"></div></footer>

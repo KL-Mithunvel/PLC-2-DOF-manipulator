@@ -26,6 +26,7 @@ Limits (be honest in any result):
 """
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import dataclass, field
 
@@ -291,14 +292,22 @@ def analyse(res: ShadowResult, min_len: float = 0.25, angle_limit_deg: float = 3
     return out
 
 
-def format_report(rep: dict) -> str:
+def format_report(rep: dict, verbose: bool = False) -> str:
+    """Text report. Signals that never did anything and always agreed are left out unless ``verbose``."""
     lines = [f"shadow report ({rep['mode']}): {rep['n_records']} polls compared, first {rep['warmup_s']:g} s skipped"]
     if rep["gaps"]:
         lines.append(f"  recording gaps (twin re-seeded): {len(rep['gaps'])}")
+    quiet = [k for k, v in rep["bits"].items() if not verbose and v["mismatch_rate"] == 0 and v["real_edges"] == 0 and v["twin_edges"] == 0]
     for k, v in rep["bits"].items():
+        if k in quiet:
+            continue
         extra = f", edge delay median {v['edge_delay_s']['median'] * 1000:.0f} ms" if "edge_delay_s" in v else ""
         lines.append(f"  bit  {k:7s} mismatch {100 * v['mismatch_rate']:5.1f} %  sustained spans {len(v['spans'])}  edges real/twin {v['real_edges']}/{v['twin_edges']}{extra}")
+    if quiet:
+        lines.append(f"  ({len(quiet)} bits never changed and always agreed: {', '.join(quiet[:6])}{' ...' if len(quiet) > 6 else ''})")
     for k, v in rep["words"].items():
+        if not verbose and v["exact_match_rate"] == 1.0:
+            continue
         lines.append(f"  word {k:7s} exact {100 * v['exact_match_rate']:5.1f} %  max diff {v['max_abs_diff']}")
     for k, v in rep["angles"].items():
         lines.append(f"  ang  {k:13s} bias {v['bias']:+.2f} deg  rms {v['rms']:.2f}  max {v['max_abs']:.2f} at {v['t_max']:.1f}  (twin later by {v['lag'] * 1000:.0f} ms)")
@@ -308,3 +317,24 @@ def format_report(rep: dict) -> str:
     lines.append("first divergence: " + (f"{fd['signal']} at {fd['t']:.2f} s into the run" if fd else "none"))
     lines.append(rep["summary"])
     return "\n".join(lines)
+
+
+def ui_payload(res: ShadowResult, rep: dict, max_points: int = 600) -> dict:
+    """Everything the GUI's Shadow tab needs, small enough to send as JSON: the report, its text, and the traces (times relative to the
+    start of the run) reduced to at most ``max_points`` samples per signal, always keeping the samples where a value changes."""
+    traces = {}
+    for name, tr in res.traces.items():
+        if len(tr.t) < 2:
+            continue
+        if tr.kind in ("bit", "word") and all(a == b for a, b in zip(tr.real, tr.twin)) and len(set(tr.real)) <= 1:
+            continue                                                         # nothing ever happened on this signal: not worth a row
+        keep = set(range(0, len(tr.t), max(1, len(tr.t) // max_points)))
+        for i in range(1, len(tr.t)):
+            if tr.real[i] != tr.real[i - 1] or tr.twin[i] != tr.twin[i - 1]:
+                keep.update((i - 1, i))
+        idx = sorted(keep)
+        traces[name] = {"kind": tr.kind, "t": [round(tr.t[i] - res.t_start, 3) for i in idx],
+                        "real": [tr.real[i] for i in idx], "twin": [tr.twin[i] for i in idx]}
+    spans = {k: [(round(a - res.t_start, 3), round(b - res.t_start, 3)) for a, b in v["spans"]] for k, v in rep["bits"].items() if v["spans"]}
+    return {"mode": res.mode, "warmup_s": res.warmup_s, "duration_s": max((tr["t"][-1] for tr in traces.values()), default=0.0),
+            "traces": traces, "spans": spans, "report": json.loads(json.dumps(rep, default=str)), "text": format_report(rep)}

@@ -56,6 +56,10 @@ python -m shadow synth out.mcap --fault latch|timer|slow   # synthetic "real" re
 
 **Report.** Per bit: mismatch rate, sustained mismatch spans (longer than `min_len`, default 0.25 s), edge counts, **edge delay** (median delay of the twin's rising edges against the real ones). Per word: exact-match rate. Per angle: bias, rms, max, lag. Alarms: `conformance` (a bit differs for a sustained span, or a word differs in over 2 % of polls), `timing` (a systematic edge delay above 0.15 s and 2.5 poll periods: the twin reaches the same states earlier or later), threshold on angle errors (3 deg for 1 s). `first_divergence` is the earliest alarm, in seconds from the start of the run.
 
+**In the GUI** (Shadow tab, `docs/img/twin/shadow.png`): the server runs the engine on a recording in `logs/` in a background thread (`shadow_run` command, result at `GET /api/shadow`; the 25 Hz stream only carries the state). The tab shows the report text and a chart of the traces, downsampled to at most about 600 samples per signal but always keeping every change; signals that never did anything are left out. Only the base name of the file is used (no path traversal).
+
+![Shadow tab: real PLC with the e-stop latch patch against the twin without it; the red bands are the sustained mismatch on Q0.7 and M30.6](img/twin/shadow.png)
+
 **What the synthetic tests show** (`tests/test_shadow_engine.py`, a twin standing in for the PLC):
 | Case | Result |
 |---|---|

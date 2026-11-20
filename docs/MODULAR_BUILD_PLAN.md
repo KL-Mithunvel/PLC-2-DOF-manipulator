@@ -110,7 +110,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 | I1 | 1 + 2 | **Record real runs** to bags with diagnostics | record, close, replay: same values; no loss of samples at 10 Hz for 30 min |
 | I2 | I1 + 3 | Real HMI picture stored with the run, shown in replay | frame times lie inside the run |
 | I3 | I1 + 4 + 5 | **Offline shadow:** replay a real bag through the shadow engine; divergence report | reproducible report from the same bag |
-| I4 | I3 + GUI | **Live shadow dashboard:** real vs twin, residual plots, event log, diagnostics panel | headless-browser test with replayed bag as the "live" source |
+| I4 (offline part built 2026-11-20: Shadow tab on a recorded bag) | I3 + GUI | **Live shadow dashboard:** real vs twin, residual plots, event log, diagnostics panel | headless-browser test with replayed bag as the "live" source |
 | I5 | I4 + 6 | Fault signatures matched live | injected fault in the twin is classified within the stated delay |
 | I6 | I4 + 7 + 8 | Multi-source ground-truth view (encoder, camera, current) | error budget table per source |
 | I7 | all | **Full system:** standalone mode untouched; each source switchable on/off; one command per mode | stage 0 gate still passes with all optional modules absent |

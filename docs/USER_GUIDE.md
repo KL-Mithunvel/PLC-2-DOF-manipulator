@@ -47,6 +47,7 @@ The dropdown above the screen switches between Auto, Manual, Setting and, for re
 | Scope | Last 25 s: angles (with reference), speed, torque (with gravity torque), motor current (simulated and measured), magnet |
 | Settings | Change whitelisted parameters live; "Apply and save" writes `twin_config.json` |
 | Structural load | Reaction moment, stress per body, minimum FOS, link-2 tip deflection against the Ansys reference lines (a scaled estimate, not live FEA) |
+| Shadow | Pick a recording that has `plc/raw` (a real run, or a synthetic one from `python -m shadow synth`), choose ladder conformance or open loop, press **Run shadow**. The text panel is the report; the chart shows every signal that did something, real (green) against the twin (blue), with sustained mismatches as red bands; in open mode the arm angles are drawn (solid = real, dashed = twin). Details: [SHADOW.md](SHADOW.md). |
 | Data sources | Pick the primary source (sim / replay), the ghost arm (second source drawn translucent cyan), record any source, replay logs (play, speed, seek), status of live sources |
 | Model & findings | Short summary of what is simulated, findings and assumptions |
 
