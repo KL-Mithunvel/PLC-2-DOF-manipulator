@@ -59,3 +59,6 @@ The real HMI panel (Kinco M2070HE-WIFI; the address used on 2026-11-20 was **192
 
 ## Files
 `live/modbus_map.py` (mapping, assumed offsets) - `live/plc_reader.py` (read-only client + source) - `live/scan.py` (offset finder) - `twin/modbus_server.py` (twin as Modbus server).
+
+## Reading the real HMI picture: `python -m live.hmi_reader FRAME.png`
+`live/hmi_reader.py` recognises which screen the VNC frame shows (AUTO, MANUAL, other), the two lamp colours on AUTO and the electromagnet switch side on MANUAL, using fractions of the frame size. It was built on the saved DTools screenshots in `docs/img/hmi/` (editor views with `####` placeholders, not live frames), so **the lamp meaning and the switch ON look are unverified**: calibrate on the first real frame and cross-check against `%Q`/`%M` bits. Needs Pillow; tests: `tests/test_hmi_reader.py`.
