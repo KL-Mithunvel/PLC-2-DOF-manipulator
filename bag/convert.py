@@ -1,4 +1,4 @@
-"""Conversion and inspection helpers: ``python -m bag info FILE`` / ``python -m bag convert OLD.jsonl [OUT]``."""
+"""Conversion and inspection helpers: ``python -m bag info FILE`` / ``python -m bag check FILE`` / ``python -m bag convert OLD.jsonl [OUT]``."""
 from __future__ import annotations
 
 import json
@@ -39,6 +39,14 @@ def main(argv: list[str]) -> int:
         for p in argv[1:]:
             print(info(p))
         return 0
+    if len(argv) >= 2 and argv[0] == "check":
+        from .check import report
+        rc = 0
+        for p in argv[1:]:
+            text, ok = report(p)
+            print(text)
+            rc |= 0 if ok else 1
+        return rc
     if len(argv) >= 2 and argv[0] == "convert":
         print("wrote", convert_jsonl_log(argv[1], argv[2] if len(argv) > 2 else None))
         return 0

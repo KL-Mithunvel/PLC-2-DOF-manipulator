@@ -51,3 +51,7 @@ print(r.meta["notes"], r.topics, r.duration, r.truncated)
 for m in r.messages(["plc/raw"], t_from=..., t_to=...):
     m.t_mono, m.t_wall, m.payload
 ```
+
+
+## Checking a recording: `python -m bag check FILE`
+Run it right after a hardware session, before the machine is switched off. It prints OK / WARN / FAIL per area and `USABLE` or `NOT USABLE` (exit code 1 on any FAIL). Checks: readable and cleanly closed; duration; metadata (git commit and dirty flag, PLC program hash, notes); clock order and wall-vs-monotonic drift; per poll group the achieved rate, period p95/max, request round-trip and gaps over 1 s (a fast group under 20 Hz is warned: the ladder shadow cascades, use `--plc-hz 25`); that the fast group covers I, Q, M10..53, %MD600 and V1000..V1063 (FAIL otherwise); that the arm actually moved and that START and the e-stop input changed (an idle or wrongly mapped recording is flagged); read errors from `diag`; HMI frame files present next to the bag, not all identical, inside the polling window; whether motor current/power data exists. Tested on synthetic good and broken bags (`tests/test_bag_check.py`); not yet run on a real recording.
