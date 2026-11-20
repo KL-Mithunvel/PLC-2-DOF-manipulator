@@ -42,6 +42,10 @@ ap.add_argument("--sensors", metavar="udp:PORT|serial:COMx[@baud]", help="motor 
 a = ap.parse_args()
 
 
+if a.demo and (a.plc or a.hmi_vnc):
+    ap.error("--demo is the digital-only showcase: it does not use the real PLC or the real HMI (drop --plc / --hmi-vnc)")
+
+
 def setup(hub):
     if a.modbus_serve:
         from twin.modbus_server import TwinModbusServer
