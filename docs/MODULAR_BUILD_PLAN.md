@@ -62,6 +62,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Gate.** Screen name and at least the cycle counters read correctly from saved real frames.
 
 ## Stage 4 - Alignment and residual engine (module `shadow/`, pure Python, no GUI)
+**Status 2026-11-20: built and tested on synthetic data** (see [SHADOW.md](SHADOW.md)): lag recovered within 20 ms with drops/jitter/noise, drift in ppm, edge delays, CUSUM/threshold/RMS detectors with measured detection delay and no false alarm on clean white noise. Not yet measured on real residuals.
 **Interface.** `align(stream_a, stream_b, method)` (resample to a common clock, estimate and remove constant lag); `residual(real, twin, signal)`; detectors: threshold, CUSUM, windowed RMS; an event log with severity.
 - **Tests (synthetic).** Known lag recovered within tolerance; injected offsets and drifts detected with the expected delay and no false alarms on clean data; stable with dropped samples.
 - **Gate.** Detection delay and false-alarm rate measured on synthetic data and written down.

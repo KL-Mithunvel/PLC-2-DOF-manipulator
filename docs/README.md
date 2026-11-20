@@ -9,6 +9,7 @@
 | [PLC_Program_and_Communication.md](PLC_Program_and_Communication.md) | Extracted ladder structure, CANopen/PDO map, PLC memory map, Ethernet settings, HMI screens |
 | [PLC_FINDINGS.md](PLC_FINDINGS.md) | Defects and quirks found by running the real ladder (with proposed fixes) |
 | [SCHEMA.md](SCHEMA.md) | JSON snapshot format shared by every data source |
+| [SHADOW.md](SHADOW.md) | Shadow toolkit: signals, time alignment, residuals, detectors, event log |
 | [BAG_FORMAT.md](BAG_FORMAT.md) | Bag recordings: files, topics, `plc/raw` and `diag` payloads, crash safety |
 | [LIVE_PLC_USAGE.md](LIVE_PLC_USAGE.md) | Connecting to the real PLC over Modbus TCP (read-only) and the real HMI over VNC (view-only) |
 | [RESEARCH_ANGLES.md](RESEARCH_ANGLES.md) | Every research angle (shadow-and-diverge and others): question, data, method, metric, status |
