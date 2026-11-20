@@ -69,3 +69,48 @@ The base tag has a known world pose, which gives the camera pose. Each Link-1 ta
 
 ## Still needed from you
 Camera model/resolution, the tag size you can fit on the plates, lighting, and the real tag mounting positions (edit `default_layout`).
+
+---
+
+# Camera selection (researched 2026-11-20)
+
+Prices are from search-result snippets of Indian shops on 2026-11-20 (the robu.in pages could not be opened); stock and prices change, check the live page before ordering. Nothing has been bought or tested yet.
+
+## What to expect
+- Tracker accuracy so far is **synthetic only**: about 0.6 deg RMS (4-5 mm at the tip) at 1080p with 6 cm tags at ~1 m; about 1.0 deg at 720p. A real camera will be worse until calibrated.
+- The camera model matters less than: diffuse bright light (short exposure), matte tags on flat rigid backing, a rigid mount, and a good chessboard calibration (20 or more images).
+- The 0.085 mm structural deflection cannot be measured with this setup.
+
+## How to choose
+| What | Look for | Why |
+|---|---|---|
+| Resolution | 1080p rather than 720p | about 1.7x better angular accuracy in the synthetic tests |
+| Frame rate | 30 fps is enough; 720p60 is a bonus | the arm is slow; clock offset is handled by the alignment in `tools/compare_runs` |
+| Shutter | global is better; rolling works with short exposure and good light | rolling shutter skews fast-moving tags |
+| Lens | fixed focus, about 70-100 deg field of view; avoid 170 deg fisheye | distortion hurts small tags |
+| Focus | fixed, or autofocus that can be switched off | autofocus hunting changes the calibration |
+| Controls | manual exposure and gain over UVC | repeatable image |
+| Interface | USB 2.0, MJPG, UVC (plug and play) | works with OpenCV without drivers |
+| Mono vs colour | mono is fine | the tags are black and white |
+
+## Options found in India
+| Camera | Shop, price (as listed) | Notes |
+|---|---|---|
+| Waveshare OV2710 2MP USB | Hubtronics Rs 2,829 (sale Rs 2,397 + GST); ThinkRobotics about Rs 2,850 | cheapest 1080p; 1080p30, 720p60, 145 deg lens (wide: calibrate carefully) |
+| Arducam 8MP IMX219 USB | robu.in Rs 3,629 | rolling shutter, fixed focus |
+| SinoSeen IMX291 1080p | robu.in Rs 5,719 | good low light |
+| Waveshare OV9281 mono USB | ThinkRobotics Rs 3,299, low stock | **global shutter**, mono, 1280x800, up to about 120 fps; best-value global shutter found |
+| Arducam OV9281 120 fps USB | Electropi Rs 6,222, 1 in stock | same sensor, M12 low-distortion lens |
+| Logitech C920 / C922 | Rs 7,129 (C920, Variety Infotech); about Rs 9,990 (C922, Shopy Vision) | easiest to mount; rolling shutter; lock the autofocus; 2-3x the module price |
+| Arducam AR0234 global shutter | Zbotic Rs 12,979 | 1080p global shutter, probably overkill |
+
+Robokits and Robocraze had no suitable USB camera (Robocraze lists Pi CSI modules at 1080p30 and the Intel RealSense D435).
+
+## Recommendation
+1. Cheapest safe start: the OV2710 (about Rs 2,400-2,850).
+2. Best upgrade for a moving arm: the OV9281 global shutter (Rs 3,300-6,200); lower resolution (1280x800), so expect roughly 720p-class angular accuracy from the pixel count, but no skew.
+3. Cheap experiment: buy one of each (about Rs 6,000), run the same calibration and runs, keep the one with the lower measured tip error.
+4. Also buy: sturdy tripod or clamp, a USB cable of 3 m or less (USB 2.0 degrades past about 5 m), matte tag backing.
+
+## One camera or two
+Start with one. A second adds depth and fewer hidden tags, but USB cameras are not hardware-synchronised (up to one frame, 33 ms, between them). Add a second identical camera only if real data shows depth error or hidden tags. Hardware-synchronised stereo global-shutter modules (ELP) were only found listed abroad.
