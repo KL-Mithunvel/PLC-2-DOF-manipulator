@@ -76,6 +76,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Gate.** Mismatch report for tomorrow's runs, each mismatch classified (interpreter, timing, real fault).
 
 ## Stage 6 - Fault injection and signatures (A8, A9)
+**Status 2026-11-20: A8 built and tested on synthetic data** (7 faults + healthy, signature extractor, nearest-centroid classifier, stored library, measured accuracy 62-75 % leave-one-severity-out, see [FAULTS.md](FAULTS.md)). A9 (tamper detection / program-hash integrity check) is NOT built.
 - A library of injectable faults in the twin (stuck limit switch, drive fault, lost comms, payload step, extra friction, slipped steps), each tagged and logged.
 - Signature extractor: which residuals move, by how much, how soon.
 - Integrity check: program hash and unexpected-behaviour alarm (A9), tested only on this machine.

@@ -2,6 +2,7 @@
 
     python -m shadow report logs/R3.mcap [--mode ladder|open] [--no-resync] [--warmup 3] [--json out.json] [--events-bag out.mcap]
     python -m shadow synth out.mcap [--fault none|latch|timer|slow] [--seconds 40] [--hz 25]
+    python -m shadow faults list | build | classify logs/R3.mcap
 
 ``report`` shadows a recording that contains ``plc/raw`` and prints what diverged and when. ``synth`` writes a synthetic "real" recording
 from a twin, optionally with a seeded fault, so the tools can be tried without hardware.
@@ -33,7 +34,36 @@ def main(argv=None) -> int:
                    help="latch = real PLC has the e-stop magnet-latch patch; timer = real timer base is 20 ms; slow = real base axis is slower")
     s.add_argument("--seconds", type=float, default=40.0)
     s.add_argument("--hz", type=float, default=25.0, help="fast poll rate")
+    f = sub.add_parser("faults", help="fault signature library: list, build, or classify a recording")
+    f.add_argument("action", choices=("list", "build", "classify"))
+    f.add_argument("bag", nargs="?")
+    f.add_argument("--severities", default="0.3,0.6,0.9")
     a = ap.parse_args(argv)
+
+    if a.cmd == "faults":
+        from . import faults as fl
+        if a.action == "list":
+            for n, ft in fl.FAULTS.items():
+                print(f"  {n:14s} {ft.description}")
+            return 0
+        if a.action == "build":
+            sev = tuple(float(x) for x in a.severities.split(","))
+            lib = fl.build_library(sev, progress=lambda n, v: print("building", n, v, flush=True))
+            fl.save_library(lib, meta={"severities": list(sev), "seconds": 20, "hz": 25, "note": "synthetic: a twin stands in for the real PLC"})
+            print("saved", fl.LIBRARY_PATH)
+            return 0
+        if not a.bag:
+            print("classify needs a recording")
+            return 2
+        recs = load_records(a.bag)
+        sig = fl.signature(recs)
+        name, d = fl.classify(sig, fl.load_library())
+        print("signature:", {k: round(v, 2) for k, v in sig.items()})
+        print("closest known case:", name)
+        for n, v in sorted(d.items(), key=lambda x: x[1]):
+            print(f"  {n:14s} distance {v:5.2f}")
+        print("(the library is built from a twin standing in for the PLC: a large distance to every case means a new kind of difference)")
+        return 0
 
     if a.cmd == "report":
         recs = load_records(a.bag)

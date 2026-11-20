@@ -96,6 +96,18 @@ def covered(rec: dict, name: str) -> bool:
     return False
 
 
+def timeline(records: list[dict]):
+    """Yields (t, real_memory, record) after each record once every poll group has been seen at least once. ``real_memory`` is ONE
+    Memory object that is updated in place: copy what you need before advancing."""
+    mem, seen = Memory(), set()
+    groups = {r["group"] for r in records}
+    for r in sorted(records, key=rec_time):
+        apply_record(r, mem)
+        seen.add(r["group"])
+        if seen >= groups:
+            yield rec_time(r), mem, r
+
+
 def _copy_memory(src: Memory, dst: Memory) -> None:
     for k in dst.area:
         dst.area[k][:] = src.area[k]
@@ -108,14 +120,7 @@ class ShadowEngine:
 
     # ---- shared: rebuild the real memory poll by poll --------------------------------------------------------------
     def _timeline(self, records: list[dict]):
-        """Yields (t, real_memory, record) after each record once every group has been seen at least once."""
-        mem, seen = Memory(), set()
-        groups = {r["group"] for r in records}
-        for r in sorted(records, key=rec_time):
-            apply_record(r, mem)
-            seen.add(r["group"])
-            if seen >= groups:
-                yield rec_time(r), mem, r
+        return timeline(records)
 
     # ---- ladder conformance ------------------------------------------------------------------------------------------
     def run_ladder(self, records: list[dict]) -> ShadowResult:
@@ -164,7 +169,8 @@ class ShadowEngine:
         pose, taught points and speeds are set from the real machine once; from then on only operator inputs are applied."""
         cfg = self.cfg
         twin = Twin(cfg)
-        traces = {"base_deg": Trace("base_deg", "angle"), "shoulder_deg": Trace("shoulder_deg", "angle")} | {b: Trace(b, "bit") for b in OPEN_BITS}
+        traces = {"base_deg": Trace("base_deg", "angle"), "shoulder_deg": Trace("shoulder_deg", "angle"),
+                  "base_mA": Trace("base_mA", "current")} | {b: Trace(b, "bit") for b in OPEN_BITS}
         tag_of_bit = {addr: tag for tag, addr in HMI_BUTTONS.items()}
         switch_of_bit = {addr: tag for tag, addr in HMI_SWITCH.items()}
         scan_s = cfg.scan_ms / 1000.0
@@ -204,6 +210,7 @@ class ShadowEngine:
             tr["base_deg"].twin.append(math.degrees(twin.arm.base.theta))
             tr["shoulder_deg"].t.append(t); tr["shoulder_deg"].real.append(cfg.shoulder.count_to_angle(real.read("VD1044")) * deg)
             tr["shoulder_deg"].twin.append(math.degrees(twin.arm.shoulder.theta))
+            tr["base_mA"].t.append(t); tr["base_mA"].real.append(real.read("VW1022")); tr["base_mA"].twin.append(twin.arm.base.current_ma)
             for b in OPEN_BITS:
                 if covered(rec, b):
                     tr[b].t.append(t); tr[b].real.append(real.read(b)); tr[b].twin.append(twin.plc.mem.read(b))
@@ -223,7 +230,7 @@ def analyse(res: ShadowResult, min_len: float = 0.25, angle_limit_deg: float = 3
                         residual, rising_edges)
     from shadow.detect import Alarm
     log = EventLog(gap_s=1.0)
-    out = {"mode": res.mode, "n_records": res.n_records, "warmup_s": res.warmup_s, "gaps": res.gaps, "bits": {}, "words": {}, "angles": {}}
+    out = {"mode": res.mode, "n_records": res.n_records, "warmup_s": res.warmup_s, "gaps": res.gaps, "bits": {}, "words": {}, "angles": {}, "currents": {}}
     t_cut = res.t_start + res.warmup_s
     for name, tr in res.traces.items():
         idx = [i for i, x in enumerate(tr.t) if x >= t_cut]
@@ -261,6 +268,9 @@ def analyse(res: ShadowResult, min_len: float = 0.25, angle_limit_deg: float = 3
                     bad = [x for x, a, b in zip(t, real, twin) if a != b]
                     log.add([Alarm("conformance", name, bad[0], bad[-1], out["words"][name]["max_abs_diff"], "warn",
                                    f"value differs in {100 * (1 - same):.1f} % of the polls")])
+        elif tr.kind == "current":                                         # motor current: residual statistics only (no alarm: it is evidence, not a verdict)
+            rs, ts = Signal(name, t, real), Signal(name, t, twin)
+            out["currents"][name] = residual(rs, ts, 0.0, dt=0.05).stats() | {"real_rms": (sum(x * x for x in real) / len(real)) ** 0.5}
         else:                                                              # angle
             rs, ts = Signal(name, t, real), Signal(name, t, twin)
             lag = 0.0
@@ -292,6 +302,8 @@ def format_report(rep: dict) -> str:
         lines.append(f"  word {k:7s} exact {100 * v['exact_match_rate']:5.1f} %  max diff {v['max_abs_diff']}")
     for k, v in rep["angles"].items():
         lines.append(f"  ang  {k:13s} bias {v['bias']:+.2f} deg  rms {v['rms']:.2f}  max {v['max_abs']:.2f} at {v['t_max']:.1f}  (twin later by {v['lag'] * 1000:.0f} ms)")
+    for k, v in rep.get("currents", {}).items():
+        lines.append(f"  cur  {k:13s} bias {v['bias']:+.0f}  rms {v['rms']:.0f}  (real rms {v['real_rms']:.0f})")
     fd = rep["first_divergence"]
     lines.append("first divergence: " + (f"{fd['signal']} at {fd['t']:.2f} s into the run" if fd else "none"))
     lines.append(rep["summary"])

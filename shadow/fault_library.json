@@ -1,0 +1,280 @@
+{
+ "features": [
+  "log_base_rms",
+  "log_shoulder_rms",
+  "log_current_bias",
+  "n_timing",
+  "timing_ms",
+  "latch",
+  "gap",
+  "n_conf_bits"
+ ],
+ "meta": {
+  "severities": [
+   0.3,
+   0.6,
+   0.9
+  ],
+  "seconds": 20,
+  "hz": 25,
+  "note": "synthetic: a twin stands in for the real PLC"
+ },
+ "signatures": {
+  "none": [
+   {
+    "log_base_rms": 0.14853238256895657,
+    "log_shoulder_rms": 0.18686256043529365,
+    "log_current_bias": 0.774516965723858,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.14853238256895657,
+    "log_shoulder_rms": 0.18686256043529365,
+    "log_current_bias": 0.774516965723858,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.14853238256895657,
+    "log_shoulder_rms": 0.18686256043529365,
+    "log_current_bias": 0.774516965723858,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   }
+  ],
+  "friction": [
+   {
+    "log_base_rms": 0.1484076555435689,
+    "log_shoulder_rms": 0.19040706893688766,
+    "log_current_bias": 2.8701331184544743,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.14790828071511225,
+    "log_shoulder_rms": 0.20209259513904054,
+    "log_current_bias": 2.982028176727138,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.14815727306039567,
+    "log_shoulder_rms": 0.2751486645206503,
+    "log_current_bias": 3.081122998628382,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   }
+  ],
+  "payload": [
+   {
+    "log_base_rms": 0.14853267187269437,
+    "log_shoulder_rms": 0.18685536996835797,
+    "log_current_bias": 0.6898938219323312,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.1485334866213567,
+    "log_shoulder_rms": 0.18684994392335216,
+    "log_current_bias": 0.5852042816150561,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.1485339092499063,
+    "log_shoulder_rms": 0.18701716790501574,
+    "log_current_bias": 0.44627585657764873,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   }
+  ],
+  "slow_base": [
+   {
+    "log_base_rms": 0.9057107523322635,
+    "log_shoulder_rms": 1.0645287610156582,
+    "log_current_bias": 0.9854979183602578,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 1.1244529733426376,
+    "log_shoulder_rms": 1.1615190973026435,
+    "log_current_bias": 1.2180419072853934,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 1.3482643694516145,
+    "log_shoulder_rms": 1.11316321854046,
+    "log_current_bias": 1.6023847681937327,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   }
+  ],
+  "slow_shoulder": [
+   {
+    "log_base_rms": 0.707643520040654,
+    "log_shoulder_rms": 0.8939629359252302,
+    "log_current_bias": 0.5546543223915991,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.8800850159073176,
+    "log_shoulder_rms": 1.252989321902593,
+    "log_current_bias": 1.2534040962495832,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 1.6764634295360468,
+    "log_shoulder_rms": 1.2806191051153717,
+    "log_current_bias": 1.282692474677025,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   }
+  ],
+  "timer": [
+   {
+    "log_base_rms": 0.3877957788339098,
+    "log_shoulder_rms": 0.4839230403915201,
+    "log_current_bias": 0.02322127261478273,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.5303145188823616,
+    "log_shoulder_rms": 0.6529685932540275,
+    "log_current_bias": 0.06226852730920955,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.6317586193429303,
+    "log_shoulder_rms": 0.7719857086252486,
+    "log_current_bias": 0.7347028726203902,
+    "n_timing": 1.0,
+    "timing_ms": 159.99999999996817,
+    "latch": 0.0,
+    "gap": 0.0,
+    "n_conf_bits": 0.0
+   }
+  ],
+  "latch": [
+   {
+    "log_base_rms": 0.0,
+    "log_shoulder_rms": 0.17745649675924186,
+    "log_current_bias": 0.0,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 1.0,
+    "gap": 0.0,
+    "n_conf_bits": 2.0
+   },
+   {
+    "log_base_rms": 0.0,
+    "log_shoulder_rms": 0.17745649675924186,
+    "log_current_bias": 0.0,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 1.0,
+    "gap": 0.0,
+    "n_conf_bits": 2.0
+   },
+   {
+    "log_base_rms": 0.0,
+    "log_shoulder_rms": 0.17745649675924186,
+    "log_current_bias": 0.0,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 1.0,
+    "gap": 0.0,
+    "n_conf_bits": 2.0
+   }
+  ],
+  "link_outage": [
+   {
+    "log_base_rms": 0.11602151795969602,
+    "log_shoulder_rms": 0.17934098196483508,
+    "log_current_bias": 0.7570277485127289,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 1.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.14343203335115984,
+    "log_shoulder_rms": 0.12854116670843302,
+    "log_current_bias": 0.48688109198772533,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 1.0,
+    "n_conf_bits": 0.0
+   },
+   {
+    "log_base_rms": 0.13073695587756806,
+    "log_shoulder_rms": 0.11376083889122908,
+    "log_current_bias": 0.4911493767804408,
+    "n_timing": 0.0,
+    "timing_ms": 0.0,
+    "latch": 0.0,
+    "gap": 1.0,
+    "n_conf_bits": 0.0
+   }
+  ]
+ }
+}
