@@ -662,6 +662,10 @@ buildLadder().then(() => { connect(); requestAnimationFrame(render); });
 
 /* ---- demo mode (?demo=1): loops the 3-cycle program unattended; any click on the page stops it ---- */
 if (/[?&]demo=1/.test(location.search)) {
+  // digital-only showcase: no real-machine tabs (Data sources, Shadow) and no real HMI picture, only the twin and its own HMI replica
+  const hide = document.createElement("style");
+  hide.textContent = 'button[data-tab="src"], button[data-tab="shadow"], #realHmiCard, #tab-src, #tab-shadow { display: none !important; }';
+  document.head.appendChild(hide);
   const badge = el("div", "", "DEMO &mdash; running the 3-cycle program in a loop &middot; click anywhere to take over"); badge.id = "demoBadge"; document.body.appendChild(badge);
   let stopped = false, busy = false;
   const stop = () => { stopped = true; badge.remove(); window.removeEventListener("pointerdown", stop, true); };

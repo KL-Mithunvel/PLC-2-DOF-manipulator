@@ -97,3 +97,6 @@ Full topic and payload reference: [BAG_FORMAT.md](BAG_FORMAT.md). **Session reco
 - Inspect: `python -m bag info logs/run_xxx.mcap` (topics, counts, duration, commit, notes). Convert an old log: `python -m bag convert logs/old.jsonl`.
 - Analysis tools (`tools/compare_runs.py`, `tools/fit_motor_params.py`) accept bags and old logs.
 - In code: `from bag import BagWriter, BagReader, collect_meta`; `BagWriter(path, collect_meta(notes="R3", payload_kg=5)).write("events", {...})`. Never put passwords in metadata.
+
+## Digital-only showcase (`python run_twin.py --demo`)
+Opens `?demo=1`: the twin loops the 3-cycle program by itself, with its own HMI replica. The real-machine parts (Data sources and Shadow tabs, the real HMI picture) are hidden in this mode; any click takes over manual control. Opening the page as plain `?demo` does not enable it, the parameter must be `demo=1`.
