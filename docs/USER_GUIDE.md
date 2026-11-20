@@ -84,3 +84,12 @@ URL options for scripted screenshots: `?snap` (one snapshot instead of streaming
 | "port in use" / page does not load | An old server is still running: stop it, or start with `--port 8766`. |
 | 3D view empty | The browser needs WebGL; reload the page. |
 | Live PLC "not connected" | Check ping, port 502, the address offsets (`live.scan`) and that the HMI is not the only allowed connection. |
+
+## Bag files (recordings)
+`python run_twin.py` records in the **bag** format by default (`--record-format jsonl` gives the old one-snapshot-per-line logs). Press Record in the Data sources tab; files go to `logs/`.
+- A bag holds several **topics** with two timestamps per message (`t_mono`: monotonic clock, for ordering and latency; `t_wall`: unix time): `twin/state` (full snapshot), `plc/decoded`, `mocap/pose`, `sensors`, `events` (the twin's log lines), later `plc/raw`, `diag`, `hmi/frame`. The header stores run metadata: git commit and whether the tree was dirty, PLC program hash, Modbus map hash, library versions, host, time.
+- Format: **MCAP** when the `mcap` package is installed (`pip install mcap`; opens in Foxglove Studio), otherwise `.bag.jsonl` (standard library only). Both read back the same.
+- Replay: choose the file in the Data sources tab (bags and old `.jsonl` logs are listed together).
+- Inspect: `python -m bag info logs/run_xxx.mcap` (topics, counts, duration, commit, notes). Convert an old log: `python -m bag convert logs/old.jsonl`.
+- Analysis tools (`tools/compare_runs.py`, `tools/fit_motor_params.py`) accept bags and old logs.
+- In code: `from bag import BagWriter, BagReader, collect_meta`; `BagWriter(path, collect_meta(notes="R3", payload_kg=5)).write("events", {...})`. Never put passwords in metadata.

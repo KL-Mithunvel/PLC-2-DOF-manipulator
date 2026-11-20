@@ -53,7 +53,8 @@ def main() -> None:
     ap.add_argument("log")
     ap.add_argument("--write", action="store_true")
     a = ap.parse_args()
-    frames = [json.loads(line) for line in open(a.log, encoding="utf-8") if line.strip()]
+    from twin.sources import load_snapshots          # old .jsonl logs and bag files
+    frames = load_snapshots(a.log)
     res = fit_log(frames)
     print(json.dumps(res, indent=1))
     if a.write:

@@ -80,7 +80,21 @@ class Recorder:
 
 
 def list_logs(directory: str = LOG_DIR) -> list[str]:
-    return sorted(os.path.basename(p) for p in glob.glob(os.path.join(directory, "*.jsonl")))
+    names = glob.glob(os.path.join(directory, "*.jsonl")) + glob.glob(os.path.join(directory, "*.mcap"))
+    return sorted(os.path.basename(p) for p in names)
+
+
+def load_snapshots(path: str, topic: str | None = None) -> list[dict]:
+    """All snapshots of a recording: old ``.jsonl`` log, ``.bag.jsonl`` or ``.mcap`` bag (snapshot topic chosen automatically)."""
+    if path.endswith(".mcap") or path.endswith(".bag.jsonl"):
+        from bag import BagReader
+        r = BagReader(path)
+        topic = topic or next((t for t in ("twin/state", "plc/decoded", "mocap/pose", "sensors") if t in r.topics), None)
+        if topic is None:
+            raise ValueError(f"{os.path.basename(path)} has no snapshot topic (found: {sorted(r.topics)})")
+        return [m.payload for m in r.messages([topic])]
+    with open(path, encoding="utf-8") as fh:
+        return [json.loads(line) for line in fh if line.strip()]
 
 
 class ReplaySource:
@@ -98,8 +112,7 @@ class ReplaySource:
 
     def load(self, name: str) -> int:
         path = os.path.join(self.dir, os.path.basename(name))      # no path traversal
-        with open(path, encoding="utf-8") as fh:
-            frames = [json.loads(line) for line in fh if line.strip()]
+        frames = load_snapshots(path)
         with self.lock:
             self.frames, self.file, self.pos, self.playing = frames, os.path.basename(path), 0.0, True
         return len(frames)

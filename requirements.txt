@@ -1,5 +1,6 @@
 # The twin itself (twin/) uses only the standard library.
 # Optional parts:
+mcap>=1.1           # bag files in MCAP format (bag/); without it bags are written as .bag.jsonl (standard library)
 pymodbus>=3.6        # live PLC reader (live/)
 pyserial>=3.5        # motor-sensor serial input (live/sensors.py)
 vncdotool>=1.2        # view-only grab of the real HMI panel (live/hmi_vnc.py)

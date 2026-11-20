@@ -43,6 +43,7 @@ class Twin:
         self.hmi_screen = "AUTO"
         self.scope: deque = deque(maxlen=2000)
         self.log: deque = deque(maxlen=200)
+        self.log_count = 0                      # total notes ever written (the deque forgets old ones)
         self._acc = 0.0
         self._last_wall = time.perf_counter()
         self._scope_t = 0.0
@@ -56,6 +57,7 @@ class Twin:
     # ------------------------------------------------------------------ log
     def note(self, msg: str) -> None:
         self.log.append(f"{self.t:8.2f}s  {msg}")
+        self.log_count += 1
 
     # ------------------------------------------------------------------ stepping
     def tick(self) -> None:

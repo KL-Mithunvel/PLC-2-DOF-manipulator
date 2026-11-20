@@ -13,7 +13,8 @@ import math
 
 
 def load(path: str) -> list[dict]:
-    return [json.loads(line) for line in open(path, encoding="utf-8") if line.strip()]
+    from twin.sources import load_snapshots          # old .jsonl logs and bag files
+    return load_snapshots(path)
 
 
 def series(frames: list[dict]):

@@ -38,6 +38,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Gate.** Fresh clone, no extra packages, `python run_twin.py --demo` runs unattended for 10 minutes with no JavaScript error (headless-browser smoke test extended).
 
 ## Stage 1 - Data contract and bag log (module `bag/`)
+**Status 2026-11-20: built** (writer/reader in both formats, metadata, recorder, replay, converter, CLI, tests). Not yet built: `plc/raw`, `diag` and `hmi/frame` producers (stage 2 and 3), scrub-by-bag-time in the GUI beyond the existing replay controls.
 **Interface.** `BagWriter(path, meta)`, `.write(topic, t_mono, t_wall, payload)`, `BagReader(path)` iterating messages by time; a `ReplaySource` that plays a bag into the Hub at 1x/faster/scrub.
 - Topics: `plc/raw`, `plc/decoded`, `twin/state`, `mocap/pose`, `sensors`, `events`, `diag`, `hmi/frame` (optional, low rate).
 - Format: MCAP (opens in Foxglove). A JSON-lines fallback writer for machines without the library.

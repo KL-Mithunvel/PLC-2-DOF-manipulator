@@ -28,15 +28,23 @@ WEB = os.path.join(os.path.dirname(__file__), "web")
 class Hub:
     """Owns the twin, the recorder, the replay source and any registered live sources."""
 
-    def __init__(self, twin: Twin, log_dir: str = LOG_DIR) -> None:
+    def __init__(self, twin: Twin, log_dir: str = LOG_DIR, record_format: str = "jsonl") -> None:
         self.twin = twin
-        self.recorder = Recorder(log_dir)                  # records the sim
+        self.record_format = record_format                  # "jsonl" (one snapshot per line) | "bag" (bag/ package: MCAP or .bag.jsonl, with events)
+        self._ev_n = twin.log_count
+        self.recorder = self._new_recorder(log_dir)         # records the sim
         self.extra_rec: dict[str, Recorder] = {}            # one recorder per other source (plc, mocap, sensors ...)
         self._log_dir = log_dir
         self.replay = ReplaySource(log_dir)
         self.live: dict[str, object] = {}       # name -> object with snapshot()/status()/control()
         self.hmi_vnc = None                     # optional live.hmi_vnc.HmiVnc: view-only grab of the real HMI panel
         self._last_wall = time.perf_counter()
+
+    def _new_recorder(self, directory: str):
+        if self.record_format == "bag":
+            from bag import BagRecorder          # lazy: the standalone twin does not need the bag package unless asked
+            return BagRecorder(directory)
+        return Recorder(directory)
 
     def register(self, name: str, source) -> None:
         self.live[name] = source
@@ -49,6 +57,11 @@ class Hub:
             self.twin.advance()
             if self.recorder.active:
                 self.recorder.offer(self.twin.snapshot())
+                new = self.twin.log_count - self._ev_n
+                if new > 0 and hasattr(self.recorder, "event"):         # twin notes -> bag topic "events"
+                    for line in list(self.twin.log)[-min(new, len(self.twin.log)):]:
+                        self.recorder.event(line.strip())
+            self._ev_n = self.twin.log_count
         for name, rec in self.extra_rec.items():
             if rec.active:
                 snap = self.snapshot(name)
@@ -93,7 +106,7 @@ class Hub:
             if src == "sim":
                 rec = self.recorder
             elif src in self.live:
-                rec = self.extra_rec.setdefault(src, Recorder(self._log_dir))
+                rec = self.extra_rec.setdefault(src, self._new_recorder(self._log_dir))
             else:
                 return {"ok": False, "error": "unknown source"}
             if t == "record_stop":

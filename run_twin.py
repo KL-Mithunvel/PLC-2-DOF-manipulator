@@ -17,6 +17,7 @@ ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDe
 ap.add_argument("--host", default="127.0.0.1")
 ap.add_argument("--port", type=int, default=8765)
 ap.add_argument("--demo", action="store_true", help="showcase mode: the page runs the 3-cycle program in a loop by itself (no hardware needed)")
+ap.add_argument("--record-format", choices=("bag", "jsonl"), default="bag", help="recording format: bag = MCAP if installed, else .bag.jsonl, with events and run metadata (default); jsonl = old one-snapshot-per-line")
 ap.add_argument("--no-browser", action="store_true")
 ap.add_argument("--fresh", action="store_true", help="ignore saved retentive data (taught points)")
 ap.add_argument("--modbus-serve", type=int, metavar="PORT", help="serve the twin memory over Modbus TCP on this port")
