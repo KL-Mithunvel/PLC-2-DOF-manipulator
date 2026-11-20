@@ -47,6 +47,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Gate.** A recorded 10-minute twin run replays identically (state hash equal) in the GUI.
 
 ## Stage 2 - Live PLC source with diagnostics (extends `live/plc_reader.py`)
+**Status 2026-11-20: built and tested without hardware** (poll groups, diagnostics, raw blocks with send/receive times, events, reconnect, session bag, GUI panel, `--record`). Remaining: run it against the real PLC (H1), check the numbers there.
 **Interface.** Source emits snapshots plus `diag`: poll period, round-trip latency, jitter, error and reconnect counts, data age, read-plan coverage.
 - Timestamp each poll (monotonic + wall) before and after the request; mark torn or partial reads.
 - Configurable poll plans (fast set for encoders, slow set for taught data) so rates can be measured per plan.

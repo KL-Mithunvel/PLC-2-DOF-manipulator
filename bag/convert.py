@@ -22,7 +22,8 @@ def convert_jsonl_log(src: str, dst: str | None = None, fmt: str = "auto", topic
 
 def info(path: str) -> str:
     r = BagReader(path)
-    lines = [f"{path}", f"  format {r.fmt}, duration {r.duration:.1f} s (monotonic), {sum(r.topics.values())} messages"]
+    lines = [f"{path}", f"  format {r.fmt}, duration {r.duration:.1f} s (monotonic), {sum(r.topics.values())} messages"
+             + ("  [NOT CLOSED CLEANLY: recorded until a crash or stop; everything before that is readable]" if r.truncated else "")]
     for t, n in sorted(r.topics.items()):
         lines.append(f"  {t:14s} {n:8d}")
     g = r.meta.get("git", {})

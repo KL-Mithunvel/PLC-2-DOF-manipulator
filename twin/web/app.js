@@ -513,15 +513,38 @@ function buildSources() {
      <tr><td>log</td><td><select id="selLog"></select> <button id="btnLoad">Load</button></td></tr>
      <tr><td>transport</td><td><button id="btnRPlay">Play/Pause</button> <select id="selRSpeed"><option>0.25</option><option selected>1</option><option>2</option><option>5</option></select>x</td></tr>
      <tr><td>position</td><td><input id="rngSeek" type="range" min="0" max="1000" value="0" style="width:200px"> <span id="lblSeek"></span></td></tr></table></div>
+   <div><b>Session recording</b><table class="dt">
+     <tr><td>run name</td><td><input id="inRunName" placeholder="R3" style="width:150px"></td></tr>
+     <tr><td>notes</td><td><input id="inRunNotes" placeholder="3 cycles, 5 kg" style="width:220px"></td></tr>
+     <tr><td id="sessState">idle</td><td><button id="btnSess">Record session</button></td></tr></table>
+     <p style="color:var(--dim)">One bag file with every topic: twin state, live PLC (decoded + raw Modbus blocks), events, diagnostics, real-HMI pictures. Inspect with <code>python -m bag info</code>.</p></div>
+   <div style="grid-column:1/-1"><b>Pipeline diagnostics</b><div id="diagView" style="color:var(--dim)">no live source registered</div></div>
    <div><b>Live sources</b><div id="liveSrc" style="color:var(--dim)">none registered. Start with <code>run_twin.py --plc HOST</code> / <code>--sensors</code> / <code>--mocap</code>.</div></div>
   </div>`;
   $("#selSrc").onchange = (e) => { SRC = e.target.value; connect(); };
   $("#selGhost").onchange = (e) => { GHOST = e.target.value; connect(); };
   $("#btnRec").onclick = () => { const src = $("#selRecSrc").value; const r = src === "sim" ? HUB.recorder : (HUB.recorders && HUB.recorders[src]) || { active: false }; post({ type: r.active ? "record_stop" : "record_start", source: src }); };
+  $("#btnSess").onclick = () => { const on = HUB && HUB.recorder.active; post(on ? { type: "record_stop_all" } : { type: "record_all", name: $("#inRunName").value.trim(), notes: $("#inRunNotes").value.trim() }); };
   $("#btnLoad").onclick = () => { const f = $("#selLog").value; if (f) post({ type: "replay_load", file: f }); };
   $("#btnRPlay").onclick = () => post({ type: "replay_play", on: !(HUB && HUB.replay.playing) });
   $("#selRSpeed").onchange = (e) => post({ type: "replay_speed", value: e.target.value });
   $("#rngSeek").oninput = (e) => post({ type: "replay_seek", frac: e.target.value / 1000 });
+}
+/* pipeline diagnostics: poll rate, latency, jitter, errors, data age per live source */
+function updateDiag() {
+  const el = $("#diagView"); if (!el || !HUB) return;
+  const rows = [], f = (v, d = 1) => (v === undefined || v === null ? "&ndash;" : Number(v).toFixed(d));
+  for (const [name, st] of Object.entries(HUB.live || {})) {
+    const d = st.diag; if (!d) { rows.push(`<tr><td>${name}</td><td colspan="8">${st.info || ""}</td></tr>`); continue; }
+    const age = d.age_s, cls = !st.connected ? "bad" : age > 1 ? "warn" : "on";
+    for (const [g, v] of Object.entries(d.groups || {})) {
+      rows.push(`<tr><td>${name}</td><td>${g}</td><td class="n">${f(v.rate_hz)}</td><td class="n">${f(v.cycle_ms.mean)} / ${f(v.cycle_ms.p95)} / ${f(v.cycle_ms.max)}</td><td class="n">${f(v.jitter_ms)}</td>
+        <td class="n">${d.errors}</td><td class="n">${d.reconnects}</td><td class="n"><span class="tag ${cls}">${age === null ? "&ndash;" : f(age, 2) + " s"}</span></td><td>${d.last_error ? d.last_error.slice(0, 40) : ""}</td></tr>`);
+    }
+  }
+  const v = HUB.hmi_vnc; if (v) rows.push(`<tr><td>real HMI (VNC)</td><td>picture</td><td class="n">&ndash;</td><td class="n">&ndash;</td><td class="n">&ndash;</td><td class="n">&ndash;</td><td class="n">&ndash;</td><td class="n"><span class="tag ${v.connected ? (v.age_s > 2 ? "warn" : "on") : "bad"}">${v.age_s == null ? "&ndash;" : f(v.age_s, 1) + " s"}</span></td><td>${v.connected ? "" : (v.info || "").slice(0, 40)}</td></tr>`);
+  el.innerHTML = rows.length ? `<table class="dt"><tr><th>source</th><th>group</th><th>rate Hz</th><th>poll ms mean / p95 / max</th><th>jitter ms</th><th>errors</th><th>reconnects</th><th>data age</th><th>last error</th></tr>${rows.join("")}</table>
+    <p style="color:var(--dim)">rate = achieved poll rate; poll = one whole group (several Modbus requests); jitter = standard deviation of the start-to-start period; data age = time since the last good poll.</p>` : "no live source registered";
 }
 function updateSources(s) {
   if (!srcBuilt) buildSources();
@@ -534,6 +557,9 @@ function updateSources(s) {
   const rr = rs.value === "sim" ? HUB.recorder : (HUB.recorders && HUB.recorders[rs.value]) || { active: false, frames: 0, file: "" };
   $("#recState").textContent = rr.active ? `recording ${rr.file} (${rr.frames} frames)` : "idle";
   $("#btnRec").textContent = rr.active ? "Stop" : "Record";
+  $("#sessState").textContent = HUB.recorder.active ? `recording ${HUB.recorder.file} (${HUB.recorder.frames} frames)` : "idle";
+  $("#btnSess").textContent = HUB.recorder.active ? "Stop recording" : "Record session";
+  updateDiag();
   const r = HUB.replay; $("#lblSeek").textContent = r.file ? `${r.file}  ${r.pos.toFixed(1)} / ${r.duration.toFixed(1)} s` : "no log loaded";
   if (document.activeElement !== $("#rngSeek") && r.duration) $("#rngSeek").value = Math.round(r.pos / r.duration * 1000);
   $("#liveSrc").innerHTML = Object.keys(HUB.live).length ? Object.entries(HUB.live).map(([k, v]) => `<div><b>${k}</b>: <span class="tag ${v.connected ? "on" : "warn"}">${v.connected ? "connected" : "not connected"}</span> ${v.info || ""}</div>`).join("") : $("#liveSrc").innerHTML;

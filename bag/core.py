@@ -11,10 +11,10 @@ Payloads are JSON-serialisable dicts. Standard topics are listed in ``TOPICS``.
 """
 from __future__ import annotations
 
-import io
 import json
 import os
 import time
+from struct import error as struct_error
 from dataclasses import dataclass
 from typing import Iterator
 
@@ -84,8 +84,10 @@ class BagWriter:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self._fh = open(path, "wb")
         if fmt == "mcap":
-            from mcap.writer import Writer
-            self._w = Writer(self._fh)
+            from mcap.writer import IndexType, Writer
+            # No chunking: every message goes straight to the file, so a crash or power cut loses almost nothing
+            # (chunked MCAP buffers up to a chunk in memory). Costs the compression; JSON bags are small anyway.
+            self._w = Writer(self._fh, use_chunking=False, index_types=IndexType.NONE)
             self._w.start(profile="", library="plc-2dof-twin/bag")
             self._chan: dict[str, int] = {}
             self._w.add_metadata("run", {"json": _dumps({"format": FORMAT_VERSION, "meta": self.meta})})
@@ -109,8 +111,7 @@ class BagWriter:
             self._fh.write((_dumps({"topic": topic, "tm": tm, "tw": tw, "d": payload}) + "\n").encode("utf-8"))
 
     def flush(self) -> None:
-        if self.fmt == "jsonl":
-            self._fh.flush()
+        self._fh.flush()
 
     def close(self) -> None:
         if self.closed:
@@ -136,6 +137,7 @@ class BagReader:
         self.fmt = "mcap" if path.endswith(SUFFIX_MCAP) else "jsonl"
         self.meta: dict = {}
         self.topics: dict[str, int] = {}
+        self.truncated = False                   # True when the file was not closed cleanly (crash, power cut) or ends mid-record
         self.t_mono_range = (None, None)
         self._scan()
 
@@ -179,21 +181,37 @@ class BagReader:
                 try:
                     o = json.loads(line)
                 except json.JSONDecodeError:         # a half-written last line after a crash: stop there
+                    self.truncated = True
                     return
                 yield Message(o["topic"], o["tm"], o["tw"], o["d"])
 
     def _iter_mcap(self) -> Iterator[Message]:
-        from mcap.reader import make_reader
+        """Sequential read (ignores the summary/footer), so files from a process that was killed still open;
+        ``self.truncated`` is set when the file ends in the middle of a record."""
+        from mcap.records import Channel, Message as McapMessage, Metadata
+        from mcap.stream_reader import StreamReader
+        chans: dict[int, str] = {}
+        self.truncated = False
         with open(self.path, "rb") as fh:
-            r = make_reader(fh)
-            for rec in r.iter_metadata():
-                if rec.name == "run":
-                    try:
-                        self.meta = json.loads(rec.metadata["json"]).get("meta", {})
-                    except (KeyError, json.JSONDecodeError):
-                        pass
-            for _schema, channel, msg in r.iter_messages():
-                yield Message(channel.topic, msg.publish_time / 1e9, msg.log_time / 1e9, json.loads(msg.data))
+            try:
+                for rec in StreamReader(fh, record_size_limit=1 << 28).records:
+                    if isinstance(rec, Channel):
+                        chans[rec.id] = rec.topic
+                    elif isinstance(rec, Metadata):
+                        if rec.name == "run":
+                            try:
+                                self.meta = json.loads(rec.metadata["json"]).get("meta", {})
+                            except (KeyError, json.JSONDecodeError):
+                                pass
+                    elif isinstance(rec, McapMessage):
+                        yield Message(chans.get(rec.channel_id, f"channel{rec.channel_id}"), rec.publish_time / 1e9, rec.log_time / 1e9, json.loads(rec.data))
+            except (EOFError, ValueError, OSError, json.JSONDecodeError, struct_error):
+                self.truncated = True
+            except Exception as exc:        # noqa: BLE001  (mcap raises its own exception types for a cut-off record)
+                if type(exc).__module__.startswith("mcap"):
+                    self.truncated = True
+                else:
+                    raise
 
 
 def open_bag(path: str) -> BagReader:

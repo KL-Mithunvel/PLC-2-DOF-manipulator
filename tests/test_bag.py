@@ -60,6 +60,25 @@ class RoundTrip(unittest.TestCase):
                 fh.write(b'{"topic":"x","tm":1,"tw":1,"d":{"i":')       # power cut mid-write
             self.assertEqual([m.payload["i"] for m in BagReader(w.path).messages()], [0, 1, 2, 3, 4])
 
+    def test_unclosed_and_cut_files_are_still_readable(self):
+        for fmt in FORMATS:
+            with self.subTest(fmt=fmt), tempfile.TemporaryDirectory() as d:
+                w = BagWriter(os.path.join(d, "k"), {"a": 1}, fmt=fmt)
+                for i in range(500):
+                    w.write("x", {"i": i, "pad": "y" * 50})
+                w.flush()                                         # a killed process: no close()
+                r = BagReader(w.path)
+                self.assertEqual(r.topics, {"x": 500}); self.assertEqual(r.meta, {"a": 1})
+                self.assertEqual(r.truncated, fmt == "mcap")      # MCAP notices the missing footer; JSON lines cannot tell
+                suffix = ".mcap" if fmt == "mcap" else ".bag.jsonl"
+                cut = os.path.join(d, "cut" + suffix)
+                with open(w.path, "rb") as a, open(cut, "wb") as b:
+                    b.write(a.read()[:-25])                        # power cut in the middle of the last record
+                c = BagReader(cut)
+                self.assertEqual(c.topics, {"x": 499}); self.assertTrue(c.truncated)
+                self.assertIn("NOT CLOSED", info(cut))
+                w.close()
+
     def test_not_a_bag_is_rejected(self):
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, "x.bag.jsonl")

@@ -86,6 +86,7 @@ URL options for scripted screenshots: `?snap` (one snapshot instead of streaming
 | Live PLC "not connected" | Check ping, port 502, the address offsets (`live.scan`) and that the HMI is not the only allowed connection. |
 
 ## Bag files (recordings)
+Full topic and payload reference: [BAG_FORMAT.md](BAG_FORMAT.md). **Session recording** (Data sources tab, or `--record NAME`) writes every source into ONE bag, including the raw PLC Modbus blocks, connection events, pipeline diagnostics and real-HMI pictures. The **Pipeline diagnostics** table in the same tab shows poll rate, latency, jitter, errors and data age per live source.
 `python run_twin.py` records in the **bag** format by default (`--record-format jsonl` gives the old one-snapshot-per-line logs). Press Record in the Data sources tab; files go to `logs/`.
 - A bag holds several **topics** with two timestamps per message (`t_mono`: monotonic clock, for ordering and latency; `t_wall`: unix time): `twin/state` (full snapshot), `plc/decoded`, `mocap/pose`, `sensors`, `events` (the twin's log lines), later `plc/raw`, `diag`, `hmi/frame`. The header stores run metadata: git commit and whether the tree was dirty, PLC program hash, Modbus map hash, library versions, host, time.
 - Format: **MCAP** when the `mcap` package is installed (`pip install mcap`; opens in Foxglove Studio), otherwise `.bag.jsonl` (standard library only). Both read back the same.

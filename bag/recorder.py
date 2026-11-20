@@ -54,10 +54,50 @@ class BagRecorder:
         if self.n % 50 == 0:
             self.writer.flush()
 
-    def write(self, topic: str, payload: dict) -> None:
-        """Write any other topic (events, diag) with the current clock."""
+    def write(self, topic: str, payload: dict, t_mono: float | None = None, t_wall: float | None = None) -> None:
+        """Write any other topic (events, diag, plc/raw). Without times, the current clock is used."""
         if self.writer:
-            self.writer.write(topic, payload)
+            self.writer.write(topic, payload, t_mono, t_wall)
 
-    def event(self, text: str, kind: str = "info") -> None:
-        self.write("events", {"text": text, "kind": kind})
+    def event(self, text: str, kind: str = "info", **extra) -> None:
+        self.write("events", {"text": text, "kind": kind, **extra})
+
+    def tap(self, source: str) -> "BagTap":
+        """A recorder for another source that writes into THIS bag (one session file with all topics, one clock)."""
+        return BagTap(self, source)
+
+
+class BagTap:
+    """Same interface as BagRecorder, but writes into the parent's bag. Stopping a tap stops the whole session."""
+
+    def __init__(self, parent: BagRecorder, source: str, period: float = 0.04) -> None:
+        self.parent, self.source, self.period = parent, source, period
+        self.n = 0
+        self._last_t = -1e9
+
+    @property
+    def active(self) -> bool:
+        return self.parent.active
+
+    @property
+    def path(self) -> str | None:
+        return self.parent.path
+
+    def start(self, name: str | None = None) -> str:
+        return self.parent.path if self.parent.active else self.parent.start(name)
+
+    def stop(self) -> None:
+        self.parent.stop()
+
+    def offer(self, snap: dict) -> None:
+        if not self.parent.active or snap["t"] - self._last_t < self.period:
+            return
+        self._last_t = snap["t"]
+        self.parent.writer.write(_TOPIC.get(self.source, self.source + "/state"), {k: v for k, v in snap.items() if k not in _STRIP})
+        self.n += 1
+
+    def write(self, topic: str, payload: dict, t_mono: float | None = None, t_wall: float | None = None) -> None:
+        self.parent.write(topic, payload, t_mono, t_wall)
+
+    def event(self, text: str, kind: str = "info", **extra) -> None:
+        self.parent.event(text, kind, **extra)

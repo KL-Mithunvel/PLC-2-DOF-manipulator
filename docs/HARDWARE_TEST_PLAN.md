@@ -6,9 +6,10 @@ Prepared 2026-11-20 for the first full session with the real arm. Everything her
 - [ ] Arm clear of people and objects; e-stop reachable; payload known (kg).
 - [ ] PC on the PLC subnet with a static IP that is **not** 192.168.0.252 (PLC reply TTL 255; TTL 128 means you pinged yourself).
 - [ ] `ping 192.168.0.252` works; PLC in RUN.
-- [ ] HMI address: DTools lists 192.168.0.100; write down the one actually used: ______ . VNC port ______ . Password set in `HMI_VNC_PASSWORD` (never written in files).
+- [ ] HMI address used on 2026-11-20: **192.168.0.253** (DTools lists 192.168.0.100). VNC port ______ (default 5900). Password set in `HMI_VNC_PASSWORD` (never written in files).
 - [ ] `pip install -r requirements.txt` (pymodbus, vncdotool).
-- [ ] Start: `python run_twin.py --plc 192.168.0.252 --hmi-vnc <hmi-ip>`; open `http://127.0.0.1:8765/?ghost=plc`.
+- [ ] Start: `python run_twin.py --plc 192.168.0.252 --hmi-vnc 192.168.0.253`; open `http://127.0.0.1:8765/?ghost=plc`. Check the **Data sources -> Pipeline diagnostics** table: fast group about 10 Hz, errors 0, data age under 1 s.
+- [ ] To record a run: type a run name and notes in **Session recording** and press **Record session** (or start with `--record R3 --notes "..." --payload-kg 5`). One bag file per run in `logs/`; check it afterwards with `python -m bag info logs/R3.mcap` (topics `twin/state`, `plc/decoded`, `plc/raw`, `diag`, `events`, `hmi/frame` should all be present).
 
 ## Checks (record the value seen on the HMI next to what the twin shows)
 1. **Verify the mapping.** Type distinctive values on the HMI (speeds `VD2020`, `VD2030`; cycle target `VW2036`); run `python -m live.scan --host 192.168.0.252 --know VD2020=<v> --know VW2036=<v>`. Expect V offset 100 (already confirmed).

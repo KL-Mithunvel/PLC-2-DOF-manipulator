@@ -39,6 +39,11 @@ class Hub:
         self.live: dict[str, object] = {}       # name -> object with snapshot()/status()/control()
         self.hmi_vnc = None                     # optional live.hmi_vnc.HmiVnc: view-only grab of the real HMI panel
         self._last_wall = time.perf_counter()
+        self._diag_t = 0.0                      # last time diagnostics were written to the bag
+        self._hmi_t = 0.0                       # last time a real-HMI frame was stored
+        self._hmi_n = -1
+        self.hmi_frame_period = 2.0             # seconds between stored HMI pictures
+        self.step_stats = None                  # live.diag.Rolling of the hub loop period (set lazily)
 
     def _new_recorder(self, directory: str):
         if self.record_format == "bag":
@@ -67,7 +72,71 @@ class Hub:
                 snap = self.snapshot(name)
                 if snap:
                     rec.offer(snap)
+        self._side_channels(dt)
         self.replay.advance(dt)
+
+    # ---- recording extras: raw blocks, events, diagnostics, HMI pictures --------------------------------------
+    def _side_channels(self, dt: float) -> None:
+        rec = self.recorder
+        writing = rec.active and hasattr(rec, "write")
+        if self.step_stats is None:
+            from .diag import Rolling
+            self.step_stats = Rolling(400)
+        self.step_stats.add(dt * 1000)
+        for name, src in self.live.items():
+            raws = src.drain_raw() if hasattr(src, "drain_raw") else []
+            evs = src.drain_events() if hasattr(src, "drain_events") else []
+            if not writing:
+                continue                                 # drained above so old data is never written into a later recording
+            for r in raws:
+                rec.write(f"{name}/raw", r, r.get("t_mono"), r.get("t_wall"))
+            for e in evs:
+                rec.write("events", {"text": e["text"], "kind": e["kind"], "source": name}, e.get("t_mono"), e.get("t_wall"))
+        if not writing:
+            return
+        now = time.monotonic()
+        if now - self._diag_t >= 1.0:
+            self._diag_t = now
+            for name, src in self.live.items():
+                if hasattr(src, "diag"):
+                    rec.write("diag", src.diag())
+            rec.write("diag", {"source": "hub", "step_ms": self.step_stats.summary()})
+        v = self.hmi_vnc
+        if v is not None and v.png and v.frames != self._hmi_n and now - self._hmi_t >= self.hmi_frame_period:
+            self._hmi_t, self._hmi_n = now, v.frames
+            import hashlib
+            folder = os.path.splitext(os.path.splitext(rec.path)[0])[0] + "_hmi" if rec.path else None
+            rel = None
+            if folder:
+                os.makedirs(folder, exist_ok=True)
+                rel = os.path.join(os.path.basename(folder), f"frame_{v.frames:06d}.png")
+                with open(os.path.join(os.path.dirname(rec.path), rel), "wb") as fh:
+                    fh.write(v.png)
+            rec.write("hmi/frame", {"n": v.frames, "t_frame_wall": v.frame_t, "bytes": len(v.png),
+                                    "sha": hashlib.sha256(v.png).hexdigest()[:16], "file": rel})
+
+    def start_recording(self, name: str | None = None, meta: dict | None = None) -> dict:
+        """One session file with every topic (twin state, every live source, raw PLC blocks, events, diagnostics, HMI pictures).
+        Needs the bag format; with the old jsonl format each source gets its own file."""
+        name = name or time.strftime("run_%Y%m%d_%H%M%S")
+        if hasattr(self.recorder, "tap"):
+            self.recorder.meta.update(meta or {})
+            self.recorder.start(name)
+            for src in self.live:
+                self.extra_rec[src] = self.recorder.tap(src)
+            self._diag_t = self._hmi_t = 0.0
+            self._hmi_n = -1
+            return {"ok": True, "file": self.recorder.path, "sources": ["sim", *self.live]}
+        files = {"sim": self.recorder.start(f"{name}_sim")}
+        for src in self.live:
+            files[src] = self.extra_rec.setdefault(src, self._new_recorder(self._log_dir)).start(f"{name}_{src}")
+        return {"ok": True, "files": files}
+
+    def stop_recording(self) -> dict:
+        self.recorder.stop()
+        for r in self.extra_rec.values():
+            r.stop()
+        return {"ok": True}
 
     def snapshot(self, name: str) -> dict | None:
         if name == "sim":
@@ -101,6 +170,10 @@ class Hub:
 
     def command(self, c: dict) -> dict:
         t = c.get("type", "")
+        if t == "record_all":
+            return self.start_recording(c.get("name") or None, {k: c[k] for k in ("notes", "payload_kg", "operator", "run") if k in c})
+        if t == "record_stop_all":
+            return self.stop_recording()
         if t in ("record_start", "record_stop"):
             src = c.get("source", "sim")
             if src == "sim":
@@ -112,6 +185,8 @@ class Hub:
             if t == "record_stop":
                 rec.stop()
                 return {"ok": True}
+            if hasattr(rec, "meta"):
+                rec.meta.update({k: c[k] for k in ("notes", "payload_kg", "operator", "run") if k in c})
             return {"ok": True, "file": rec.start(c.get("name") or None)}
         if t == "replay_load":
             return {"ok": True, "frames": self.replay.load(c["file"])}
@@ -229,9 +304,9 @@ def make_handler(hub: Hub):
 
 
 def run(host: str = "127.0.0.1", port: int = 8765, persist: bool = True, open_browser: bool = False,
-        hub_setup=None, query: str = "") -> None:
+        hub_setup=None, query: str = "", record_format: str = "jsonl") -> None:
     twin = Twin(persist=persist)
-    hub = Hub(twin)
+    hub = Hub(twin, record_format=record_format)
     if hub_setup:
         hub_setup(hub)
     stop = threading.Event()
