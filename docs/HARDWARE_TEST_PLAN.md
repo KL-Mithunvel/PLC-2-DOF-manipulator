@@ -21,7 +21,8 @@ Prepared 2026-11-20 for the first full session with the real arm. Everything her
 2. **M area and encoders.** While the arm is at rest and then moving: `%MD600` (base), `%VD1044` (shoulder) change; check sign and scale against the visible arm angle. Confirm M-area offset 320 with a known bit (for example the magnet switch or a teach flag).
 3. **Counters.** `%VW2500` (minutes), `%VW2510` (seconds), `%VW2400` (cycle number) during a run.
 4. **Taught points.** Table beside the HMI view: does the arm sit on the taught point to within a few mm at INIT, pick, drop?
-5. **VNC.** Real HMI picture appears; note frame age and any refusal of a second client.
+5. **Base motor current for shunt sizing.** Log `%VW1022` (mA) through a few cycles with and without the payload and note the peak: it decides the shunt range of the power meters ([POWER_METER_PLAN.md](POWER_METER_PLAN.md)).
+6. **VNC.** Real HMI picture appears; note frame age and any refusal of a second client.
 
 ## Runs to record (use Data sources tab -> Record; name files with date and run number)
 | Run | What | For angle |

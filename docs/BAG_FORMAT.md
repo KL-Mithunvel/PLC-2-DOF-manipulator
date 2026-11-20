@@ -26,7 +26,8 @@ A bag is a recording of one session: timestamped messages on named topics, plus 
 | `diag` | `{"source": "plc"/"hub", ...}` statistics, see below | 1 Hz each |
 | `events` | `{"text","kind","source"?}`: twin log lines, PLC connect/error | when they happen |
 | `hmi/frame` | `{"n","t_frame_wall","bytes","sha","file"}` reference to a stored picture | one per 2 s |
-| `mocap/pose`, `sensors` | snapshots of those sources | with their source |
+| `mocap/pose`, `sensors` | snapshots of those sources; `sensors` = measured motor current/voltage (ESP32 feed or power meters) | with their source |
+| `sensors/raw` | power meters: `{"t_mono","t_wall","meter":"base|shoulder","slave","t0","t1","regs":[8 registers]}`; `live.pzem.decode_regs` gives V, A, W, Wh | meter poll rate (about 2 Hz) |
 
 ### `plc/raw` record (one poll of one group)
 ```

@@ -38,7 +38,7 @@ Sources other than the simulation (live PLC, mocap, sensors) are optional plug-i
 | `twin/modbus_server.py` | Exposes the twin's memory as a read-only Modbus TCP server using the real Kinco address map. |
 | `twin/web/` | UI: `index.html`, `app.js` (HMI, panels, tabs, graphs), `arm3d.js` + `view3d.js` + `ghost3d.js` (three.js), `ladder.js` (ladder diagram), `vendor/` (three.js 0.160, OrbitControls, GLTFLoader). |
 | `bag/` | `core.py` (BagWriter/BagReader, MCAP or `.bag.jsonl`), `meta.py` (run metadata), `recorder.py` (BagRecorder, drop-in for `twin.sources.Recorder`), `convert.py` (`python -m bag info/convert`). Stage 1 of [MODULAR_BUILD_PLAN.md](MODULAR_BUILD_PLAN.md). |
-| `live/` | `plc_reader.py` (read-only pymodbus client + source), `modbus_map.py`, `scan.py` (find offsets), `hmi_vnc.py` (view-only VNC picture of the real HMI, served at `/api/hmi.png`), `sensors.py` (UDP/serial sensor input). |
+| `live/` | `plc_reader.py` (read-only pymodbus client + source), `modbus_map.py`, `scan.py` (find offsets), `hmi_vnc.py` (view-only VNC picture of the real HMI, served at `/api/hmi.png`), `rtu.py` + `pzem.py` + `powermeter.py` (Modbus RTU master, PZEM-017 power meters and their simulation, see [POWER_METER_PLAN.md](POWER_METER_PLAN.md)), `sensors.py` (UDP/serial sensor input). |
 | `mocap/` | `geometry.py` (marker layout, transforms), `tracker.py`, `calibrate.py`, `placement.py`, `synth.py` (rendered test images), `source.py`. |
 | `tools/` | `calibrate_cycle`, `fit_motor_params`, `import_cad` (+ `meshio`), `make_tags`, `compare_runs`, `mocap_demo`, `sim_sensors`. |
 

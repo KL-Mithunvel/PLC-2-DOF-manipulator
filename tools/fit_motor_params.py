@@ -28,7 +28,23 @@ def linfit(x: list[float], y: list[float]) -> tuple[float, float, float]:
     return a, b, 1 - ss_res / ss_tot
 
 
-def fit_log(frames: list[dict], cfg: TwinCfg | None = None) -> dict:
+def _smooth(v: list[float], n: int) -> list[float]:
+    """Trailing moving average over ``n`` samples."""
+    if n <= 1:
+        return v
+    out, acc = [], 0.0
+    for i, x in enumerate(v):
+        acc += x
+        if i >= n:
+            acc -= v[i - n]
+        out.append(acc / min(i + 1, n))
+    return out
+
+
+def fit_log(frames: list[dict], cfg: TwinCfg | None = None, smooth: int = 1) -> dict:
+    """``smooth``: average both the torque and the measured current over this many consecutive frames before fitting. Use it whenever
+    the measurement is not simultaneous with the torque (a power meter that updates a few times a second, a sensor with its own
+    averaging): the torque ripples much faster than the meter, and regressing a smoothed signal on an instantaneous one biases the slope."""
     cfg = cfg or TwinCfg()
     out = {}
     for key, ax in (("base", cfg.base), ("shoulder", cfg.shoulder)):
@@ -38,6 +54,7 @@ def fit_log(frames: list[dict], cfg: TwinCfg | None = None) -> dict:
             if s and key in f and "tau" in f[key]:
                 x.append(abs(f[key]["tau"]) / ax.ratio)
                 y.append(s["mA"])
+        x, y = _smooth(x, smooth), _smooth(y, smooth)
         if len(x) < 20 or max(x) - min(x) < 1e-6:
             out[key] = {"error": f"not enough varied data ({len(x)} samples)"}
             continue
@@ -52,10 +69,11 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("log")
     ap.add_argument("--write", action="store_true")
+    ap.add_argument("--smooth", type=int, default=1, help="average torque and current over this many frames (needed for slow meters)")
     a = ap.parse_args()
     from twin.sources import load_snapshots          # old .jsonl logs and bag files
     frames = load_snapshots(a.log)
-    res = fit_log(frames)
+    res = fit_log(frames, smooth=a.smooth)
     print(json.dumps(res, indent=1))
     if a.write:
         old = json.load(open(OVERRIDE_FILE)) if os.path.exists(OVERRIDE_FILE) else {}

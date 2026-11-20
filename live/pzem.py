@@ -28,6 +28,12 @@ RANGE_CODES = {100: 0, 50: 1, 200: 2, 300: 3}
 RANGE_AMPS = {v: k for k, v in RANGE_CODES.items()}
 
 
+def decode_regs(r: list[int]) -> dict:
+    """The 8 input registers as physical values (see the register map above)."""
+    return {"voltage_v": r[0] * 0.01, "current_a": r[1] * 0.01, "power_w": (r[3] << 16 | r[2]) * 0.1,
+            "energy_wh": float(r[5] << 16 | r[4]), "high_alarm": bool(r[6]), "low_alarm": bool(r[7]), "regs": list(r)}
+
+
 class Pzem017:
     """Driver. ``shunt_a`` must match the current range configured in the meter."""
 
@@ -35,9 +41,7 @@ class Pzem017:
         self.m, self.slave = master, slave
 
     def read(self) -> dict:
-        r = self.m.read_input_registers(self.slave, 0x0000, 8)
-        return {"voltage_v": r[0] * 0.01, "current_a": r[1] * 0.01, "power_w": (r[3] << 16 | r[2]) * 0.1,
-                "energy_wh": float(r[5] << 16 | r[4]), "high_alarm": bool(r[6]), "low_alarm": bool(r[7]), "regs": r}
+        return decode_regs(self.m.read_input_registers(self.slave, 0x0000, 8))
 
     def read_settings(self) -> dict:
         r = self.m.read_holding_registers(self.slave, 0x0000, 4)

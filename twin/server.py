@@ -44,6 +44,7 @@ class Hub:
         self._hmi_n = -1
         self.hmi_frame_period = 2.0             # seconds between stored HMI pictures
         self.step_stats = None                  # live.diag.Rolling of the hub loop period (set lazily)
+        self.tickers: list = []                 # objects with step(dt_wall): simulated devices driven by the twin (e.g. simulated power meters)
         self.shadow: dict = {"state": "idle"}   # result of the last shadow run (see shadow_run); big, served by /api/shadow only
 
     def _new_recorder(self, directory: str):
@@ -73,6 +74,8 @@ class Hub:
                 snap = self.snapshot(name)
                 if snap:
                     rec.offer(snap)
+        for f in self.tickers:
+            f.step(dt)
         self._side_channels(dt)
         self.replay.advance(dt)
 

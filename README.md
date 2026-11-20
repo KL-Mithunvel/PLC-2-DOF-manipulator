@@ -34,7 +34,7 @@ Navigation: 3D view has Iso/Top/Front/Side/Back, Follow tip, Fit, Reset and full
 ## What is in here
 ```
 twin/            the digital twin: PLC interpreter, drives, arm physics, HMI, web server and UI (twin/web)
-live/            read-only live PLC feed (Modbus TCP) and motor-sensor input
+live/            read-only live PLC feed (Modbus TCP), motor-sensor input, per-motor DC power meters (Modbus RTU, simulated or real)
 mocap/           motion capture from camera images (ArUco tags)
 bag/             bag files: timestamped multi-topic recordings (MCAP or JSON lines) with run metadata, and replay
 shadow/          shadow-and-diverge: alignment, residuals, detectors, shadow engine vs a recording, fault signatures (stages 4-6)

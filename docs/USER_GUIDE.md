@@ -8,6 +8,7 @@ python run_twin.py --no-browser    do not open a browser
 python run_twin.py --fresh         ignore saved taught points / speeds, start from the defaults
 python run_twin.py --modbus-serve 1502       also serve the twin over Modbus TCP (read-only)
 python run_twin.py --plc 192.168.0.252       add the real PLC as a read-only live source
+python run_twin.py --power sim                     simulated per-motor power meters driven by the twin (real: --power COM5@9600)
 python run_twin.py --hmi-vnc 192.168.0.100           show the real HMI (view-only VNC); password via env HMI_VNC_PASSWORD
 python run_twin.py --mocap 0 --mocap-calib mocap/camera.json      add camera tracking
 python run_twin.py --sensors udp:9100        add motor current/voltage sensors

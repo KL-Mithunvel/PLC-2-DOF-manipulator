@@ -7,6 +7,8 @@
   python run_twin.py --plc 192.168.0.252[:502]      add the REAL PLC as a read-only live source ("plc", shown as the ghost arm)
   python run_twin.py --hmi-vnc 192.168.0.253[:5900]   show the REAL HMI (view-only VNC) next to the replica; password via HMI_VNC_PASSWORD
   python run_twin.py --mocap 0 --mocap-calib mocap/camera.json   camera tracking of the AprilTags (docs/MOCAP_PLAN.md)
+  python run_twin.py --power sim                    simulated per-motor power meters driven by the twin (no hardware)
+  python run_twin.py --power COM5@9600              real PZEM-017 meters on a USB-RS485 adapter (docs/POWER_METER_PLAN.md)
   python run_twin.py --sensors udp:9100             add the motor current/voltage sensor feed (see docs/LIVE_DATA_PLAN.md)
 """
 import argparse
@@ -22,6 +24,9 @@ ap.add_argument("--record-format", choices=("bag", "jsonl"), default="bag", help
 ap.add_argument("--record", nargs="?", const="", metavar="NAME", help="start one session recording (all sources, one bag file) as soon as the sources are up; NAME defaults to run_<time>")
 ap.add_argument("--notes", default="", help="free text stored in the recording's metadata (run id, conditions)")
 ap.add_argument("--payload-kg", type=float, default=None, help="payload on the arm, stored in the metadata")
+ap.add_argument("--power", metavar="sim|COMx[@baud]", help="per-motor DC power meters (PZEM-017 over RS485), or sim = simulated meters driven by the twin; replaces --sensors")
+ap.add_argument("--power-slaves", default="base=1,shoulder=2", help="Modbus slave addresses of the meters")
+ap.add_argument("--power-hz", type=float, default=2.0, help="poll rate of the meters")
 ap.add_argument("--no-browser", action="store_true")
 ap.add_argument("--fresh", action="store_true", help="ignore saved retentive data (taught points)")
 ap.add_argument("--modbus-serve", type=int, metavar="PORT", help="serve the twin memory over Modbus TCP on this port")
@@ -65,6 +70,16 @@ def setup(hub):
             print("sensor support not available yet")
         else:
             hub.register("sensors", SensorSource.from_spec(a.sensors, hub.twin).start())
+    if a.power:
+        if a.sensors:
+            raise SystemExit("--power and --sensors both feed the 'sensors' slot: use one")
+        from live.powermeter import PowerMeterSource
+        slaves = {k: int(v) for k, v in (kv.split("=") for kv in a.power_slaves.split(","))}
+        src, feed = PowerMeterSource.from_spec(a.power, hub.twin, slaves, a.power_hz)
+        hub.register("sensors", src.start())
+        if feed:
+            hub.tickers.append(feed)
+        print(f"Power meters: {a.power} {slaves} at {a.power_hz:g} Hz")
     if a.record is not None:
         if a.record_format != "bag":
             print("--record needs --record-format bag (the default); ignoring")
