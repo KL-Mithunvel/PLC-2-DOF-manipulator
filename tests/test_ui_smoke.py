@@ -40,9 +40,15 @@ class UiSmoke(unittest.TestCase):
 
     def load(self, query):
         prof = tempfile.mkdtemp()
-        r = subprocess.run([BROWSER, "--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", f"--user-data-dir={prof}",
-                            "--enable-logging=stderr", "--v=0", "--virtual-time-budget=6000", "--dump-dom", self.url + query],
-                           capture_output=True, text=True, timeout=90, encoding="utf-8", errors="ignore")
+        cmd = [BROWSER, "--headless=new", "--disable-gpu", "--enable-unsafe-swiftshader", f"--user-data-dir={prof}",
+               "--enable-logging=stderr", "--v=0", "--virtual-time-budget=6000", "--dump-dom", self.url + query]
+        for attempt in (1, 2):                  # headless Edge occasionally hangs at start-up: one retry, then fail
+            try:
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="ignore")
+                break
+            except subprocess.TimeoutExpired:
+                if attempt == 2:
+                    raise
         shutil.rmtree(prof, ignore_errors=True)
         errs = [l for l in r.stderr.splitlines() if "CONSOLE" in l and any(b in l for b in BAD)]
         return r.stdout, errs
