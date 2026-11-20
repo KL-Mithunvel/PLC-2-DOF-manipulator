@@ -28,6 +28,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 ---
 
 ## Stage 0 - Standalone showcase twin (no hardware, ever)
+**Status 2026-11-20: built** (0.1-0.5), tests green; the 10-minute unattended demo run has not been timed yet.
 **Goal.** `python run_twin.py` (or `--demo`) runs the whole twin by itself and looks good to a visitor.
 - **0.1 Isolation guard.** Test that importing `twin.server` and `twin.sim` pulls in nothing from `live`, `mocap`, `pymodbus`, `vncdotool`, `cv2`.
 - **0.2 Demo mode.** `--demo` opens the UI with `?demo=1`: the page runs the 3-cycle program in a loop by itself (HMI RESET, panel RESET, START, wait for completion, repeat; this sequence was checked on the twin) and shows a small "demo" badge; any user click stops the loop.

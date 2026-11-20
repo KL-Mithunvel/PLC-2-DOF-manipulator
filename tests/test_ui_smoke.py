@@ -54,6 +54,13 @@ class UiSmoke(unittest.TestCase):
         for needle in ("Wi-Fi / network (system)", "NUMBER OF CYCLE", "Data sources", "Structural load", 'id="cvIso"'):
             self.assertIn(needle, dom)
 
+    def test_demo_mode_loads_without_errors(self):
+        dom, errs = self.load("?snap&demo=1")      # ?snap: no live stream, so the headless dump can finish
+        self.assertEqual(errs, [])
+        self.assertIn("demoBadge", dom)                                       # the badge is created
+        self.assertIn('id="viewBar"', dom)                                    # 3D navigation bar and ladder controls are present
+        self.assertIn('id="selJump"', dom)
+
     def test_tabs_load_without_errors(self):
         for tab, needle in (("struct", "reaction bending moment"), ("cfg", "timer_base_ms"), ("src", "Recorder"), ("mem", "Bit memory"), ("can", "COB-ID")):
             dom, errs = self.load(f"?snap&tab={tab}")

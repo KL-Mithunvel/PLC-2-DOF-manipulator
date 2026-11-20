@@ -22,6 +22,15 @@ python run_tests.py                                      # all tests (about 80 s
 ```
 In the browser: press **START** on the HMI's Auto screen to run the 3-cycle pick-and-place, drag the 3D view to orbit. How to use every tab: [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
+## Run it without any hardware (showcase mode)
+The twin is self-contained: no PLC, HMI panel, camera or sensors needed, and the core needs no packages beyond Python 3.10+.
+```
+python run_twin.py --demo        # loops the 3-cycle pick-and-place by itself; click anywhere to take over
+python run_twin.py               # normal mode: press START on the on-screen HMI yourself
+```
+![The twin: HMI replica, 3D arm, axis panels and live ladder](docs/img/twin/overview.png)
+Navigation: 3D view has Iso/Top/Front/Side/Back, Follow tip, Fit, Reset and full screen (keys 1-5, F, R); the ladder scrolls both ways, drags to pan and zooms. Hardware parts (`live/`, `mocap/`) are optional plug-ins; a test (`tests/test_standalone.py`) fails if the twin ever depends on them.
+
 ## What is in here
 ```
 twin/            the digital twin: PLC interpreter, drives, arm physics, HMI, web server and UI (twin/web)
