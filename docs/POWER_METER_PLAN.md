@@ -71,7 +71,7 @@ Run: `python run_twin.py --power sim` (no hardware), or later `python run_twin.p
 
 ## Software still to build once real meters exist
 1. Verify the register map and serial format on a real meter; flip `REGISTER_MAP_VERIFIED`; add the real response times to the simulated bus.
-2. `shadow`: add measured power to the open-mode comparison and extend the fault library with it (re-measure the payload case); `analysis`: energy per cycle and power per phase from `Wh_sw`.
+2. `shadow`: DONE in simulation (open mode accepts meter samples, payload study in FAULTS.md); still to do: add a power feature to the fault library and feed real samples; `analysis`: energy per cycle and power per phase from `Wh_sw`.
 3. A meter setup command (set address 2 on one meter, set the shunt range) as an explicit, confirm-first tool.
 4. PLC-side reading only if wanted (see PLC integration above).
 

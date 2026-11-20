@@ -165,3 +165,18 @@ def load_library(path: str = LIBRARY_PATH) -> dict:
 def save_library(lib: dict, path: str = LIBRARY_PATH, meta: dict | None = None) -> None:
     with open(path, "w", encoding="utf-8") as fh:
         json.dump({"features": FEATURES, "meta": meta or {}, "signatures": lib}, fh, indent=1)
+
+
+# ---- what a per-motor current meter adds (research angle B2) ------------------------------------------------------------------
+def power_study(fault: str, severity: float, seconds: float = 25.0, hz: float = 25.0, meter_window_s: float = 0.04, base: TwinCfg | None = None) -> dict:
+    """Shadow one synthetic faulted recording in open mode WITH an external current meter. Returns the open-mode current residuals:
+    ``base`` is what the PLC exposes (``%VW1022``), ``shoulder`` is only available with the meter. Compare healthy and faulted runs."""
+    base = base or load_config()
+    c, extra, keep = build_case(fault, severity, base)
+    meter: list = []
+    recs = record_session(Twin(c), seconds, standard_run(4.0) + extra, fast_hz=hz, sensors_hz=100.0, sensors=meter, meter_window_s=meter_window_s)
+    if keep:
+        recs = [r for r in recs if keep(r)]
+    rep = analyse(ShadowEngine(base, warmup_s=3.0).run_open(recs, sensors=meter))
+    cur = rep["currents"]
+    return {k: {"bias": v["bias"], "rms": v["rms"], "real_rms": v["real_rms"]} for k, v in cur.items()}

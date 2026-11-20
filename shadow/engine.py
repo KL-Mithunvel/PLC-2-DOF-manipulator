@@ -165,13 +165,19 @@ class ShadowEngine:
         return ShadowResult("ladder", traces, t_start or 0.0, self.warmup_s, n, gaps)
 
     # ---- open loop twin vs real arm --------------------------------------------------------------------------------
-    def run_open(self, records: list[dict]) -> ShadowResult:
+    def run_open(self, records: list[dict], sensors: list | None = None) -> ShadowResult:
         """The twin is booted and driven by the operator inputs only. After ``warmup_s`` (the real machine is idle after power-up) its arm
-        pose, taught points and speeds are set from the real machine once; from then on only operator inputs are applied."""
+        pose, taught points and speeds are set from the real machine once; from then on only operator inputs are applied.
+        ``sensors``: optional ``[(t_mono, {"base_mA", "shoulder_mA"})]`` from an external meter (same clock as the records). When given, the
+        meter's shoulder current (which the PLC does not expose) is compared with the twin's as a ``shoulder_mA`` trace."""
         cfg = self.cfg
         twin = Twin(cfg)
         traces = {"base_deg": Trace("base_deg", "angle"), "shoulder_deg": Trace("shoulder_deg", "angle"),
                   "base_mA": Trace("base_mA", "current")} | {b: Trace(b, "bit") for b in OPEN_BITS}
+        if sensors:
+            traces["shoulder_mA"] = Trace("shoulder_mA", "current")
+        sens_t = [x[0] for x in sensors or []]
+        from bisect import bisect_right
         tag_of_bit = {addr: tag for tag, addr in HMI_BUTTONS.items()}
         switch_of_bit = {addr: tag for tag, addr in HMI_SWITCH.items()}
         scan_s = cfg.scan_ms / 1000.0
@@ -212,6 +218,11 @@ class ShadowEngine:
             tr["shoulder_deg"].t.append(t); tr["shoulder_deg"].real.append(cfg.shoulder.count_to_angle(real.read("VD1044")) * deg)
             tr["shoulder_deg"].twin.append(math.degrees(twin.arm.shoulder.theta))
             tr["base_mA"].t.append(t); tr["base_mA"].real.append(real.read("VW1022")); tr["base_mA"].twin.append(twin.arm.base.current_ma)
+            if sensors:
+                j = bisect_right(sens_t, t) - 1                       # latest meter sample at or before this poll (zero-order hold)
+                if j >= 0 and t - sens_t[j] < 1.0:
+                    tr["shoulder_mA"].t.append(t); tr["shoulder_mA"].real.append(sensors[j][1]["shoulder_mA"])
+                    tr["shoulder_mA"].twin.append(twin.arm.shoulder.current_ma)
             for b in OPEN_BITS:
                 if covered(rec, b):
                     tr[b].t.append(t); tr[b].real.append(real.read(b)); tr[b].twin.append(twin.plc.mem.read(b))

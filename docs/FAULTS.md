@@ -37,3 +37,16 @@ A large distance to every case means a new kind of difference, not that the near
 - Synthetic: the real machine has noise, backlash, compliance and sensor effects the twin does not model; expect lower accuracy.
 - Eight hand-made features and a nearest-centroid rule are a baseline, not a tuned classifier; three severities per fault is a small library.
 - Faults are injected one at a time; combinations are not covered.
+
+## Measured shoulder current closes the payload gap (simulated, 2026-11-20)
+`shadow.faults.power_study(fault, severity)` shadows a synthetic faulted recording in open mode **with** an ideal external current meter (the twin's own motor model, averaged over 40 ms, 100 Hz) and reports the current residuals. Result (bias of real minus twin, mA; healthy shoulder bias +75):
+
+| case | base current (PLC-exposed) bias | shoulder current (meter) bias |
+|---|---|---|
+| healthy | -6 | +75 |
+| payload +0.3 kg | -6 | +176 |
+| payload +1.5 kg | -4 | +577 |
+| payload +3 kg | +1 | +1071 |
+| friction (severity 0.3) | +765 | +283 |
+
+So the shoulder current bias grows about 340 mA per kg while the PLC-exposed base current stays flat: the payload that was invisible to every PLC signal becomes visible, and friction (base-current signature) separates from payload (shoulder-current signature). **Limits:** the meter here is ideal (no noise, offset, quantisation or shunt error), the twin and the "real" machine share the same model structure, and the RMS residual is large even when healthy (1490 mA, timing/chatter), so only the **bias** is usable. Whether the real shoulder separates equally well depends on the real meter noise and on how well the twin's torque model is calibrated. `run_open(records, sensors=...)` takes real meter samples unchanged. Tests: `tests/test_power_shadow.py`. The fault library (`fault_library.json`) was not rebuilt with a power feature.

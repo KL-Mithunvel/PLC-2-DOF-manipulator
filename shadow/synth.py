@@ -28,9 +28,13 @@ def poll_twin(twin: Twin, group: str, spec: dict, t_mono: float, t_wall: float) 
 
 
 def record_session(twin: Twin, seconds: float, script=None, fast_hz: float = 10.0, slow_hz: float = 1.0,
-                   t_mono0: float = 1000.0, wall0: float = 1.7e9) -> list[dict]:
+                   t_mono0: float = 1000.0, wall0: float = 1.7e9, sensors_hz: float = 0.0, sensors: list | None = None,
+                   meter_window_s: float = 0.0) -> list[dict]:
     """Run ``twin`` for ``seconds`` of simulated time. ``script`` = list of ``(t_seconds, fn(twin))`` operator actions.
-    Returns the raw records a poll would have produced, in time order."""
+    Returns the raw records a poll would have produced, in time order.
+    ``sensors_hz`` > 0 and a list passed as ``sensors``: also append ``(t_mono, {"base_mA", "shoulder_mA"})`` samples of an ideal
+    per-motor current meter (the twin's own motor current model) to that list. ``meter_window_s`` > 0 makes each sample the average over
+    that window, as a real INA226 / PZEM reading is."""
     script = sorted(script or [], key=lambda x: x[0])
     groups = make_groups(fast_hz, slow_hz)
     due = {g: 0.0 for g in groups}
@@ -38,12 +42,21 @@ def record_session(twin: Twin, seconds: float, script=None, fast_hz: float = 10.
     dt = twin.cfg.scan_ms / 1000.0
     t = 0.0
     si = 0
+    s_due, acc, n_acc = 0.0, [0.0, 0.0], 0
     while t < seconds:
         while si < len(script) and script[si][0] <= t:
             script[si][1](twin)
             si += 1
         twin.tick()
         t += dt
+        if sensors is not None and sensors_hz > 0:
+            acc[0] += twin.arm.base.current_ma; acc[1] += twin.arm.shoulder.current_ma; n_acc += 1
+            if t >= s_due:
+                n = max(1, n_acc) if meter_window_s > 0 else 1
+                a = (acc[0] / n, acc[1] / n) if meter_window_s > 0 else (twin.arm.base.current_ma, twin.arm.shoulder.current_ma)
+                sensors.append((t_mono0 + t, {"base_mA": a[0], "shoulder_mA": a[1]}))
+                s_due += 1.0 / sensors_hz
+                acc, n_acc = [0.0, 0.0], 0
         for g, spec in groups.items():
             if t >= due[g]:
                 out.append(poll_twin(twin, g, spec, t_mono0 + t, wall0 + t))
