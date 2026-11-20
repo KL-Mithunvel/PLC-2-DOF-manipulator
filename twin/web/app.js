@@ -547,7 +547,8 @@ function render() {
   if (S && frame % 10 === 0 && $("#tab-src").classList.contains("on")) updateSources(S);
   requestAnimationFrame(render);
 }
-let ES = null, SRC = "sim", GHOST = "none", HUB = null;
+let ES = null, SRC = "sim", GHOST = (/[?&]ghost=(\w+)/.exec(location.search) || [])[1] || "none", HUB = null;   // ?ghost=plc starts mirroring the live PLC
+{ const sc = /[?&]screen=(\w+)/.exec(location.search); if (sc && !location.search.includes("snap")) showScreen(sc[1]); }
 function connect() {
   if (location.search.includes("snap")) {
     Promise.all([fetch("/api/state").then((r) => r.json()), fetch("/api/scope").then((r) => r.json())]).then(([s, sc]) => { s.watch = {}; S = window.__lastSnap = s; sc.forEach((x) => scope.push(x)); const sc2 = /screen=(\w+)/.exec(location.search); if (sc2) showScreen(sc2[1]); const m = /tab=(\w+)/.exec(location.search); if (m) document.querySelector(`#tabs button[data-tab=${m[1]}]`).click(); });
