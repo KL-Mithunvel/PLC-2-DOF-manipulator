@@ -42,6 +42,8 @@ class SensorSource:
         self.samples = {c: deque(maxlen=5000) for c in CHANNELS}   # (pc_time, mA, mV)
         self.count = 0
         self.bad = 0
+        self.header: list[str] = []          # last "H,..." line of the firmware (version, shunt, calibration, ...)
+        self.errors: list[str] = []          # last "E,..." lines of the firmware
         self.last_rx = 0.0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -59,6 +61,14 @@ class SensorSource:
 
     # ---- ingest ------------------------------------------------------------
     def feed_line(self, line: str, now: float | None = None) -> bool:
+        if line[:2] in ("H,", "E,"):                           # firmware header and error lines are information, not bad samples
+            parts = line.strip().split(",", 2 if line[0] == "E" else 6)
+            if line[0] == "H":
+                self.header = parts
+            else:
+                self.errors.append(line.strip())
+                del self.errors[:-20]
+            return True
         p = parse_line(line)
         if p is None:
             self.bad += 1
@@ -102,7 +112,8 @@ class SensorSource:
     def status(self) -> dict:
         age = time.time() - self.last_rx if self.last_rx else None
         ok = age is not None and age < 2
-        return {"connected": ok, "info": f"{self.label} samples={self.count} bad={self.bad}"}
+        err = f" last error: {self.errors[-1]}" if self.errors else ""
+        return {"connected": ok, "info": f"{self.label} samples={self.count} bad={self.bad}{err}"}
 
     def control(self, action: str, params: dict) -> dict:
         return {}

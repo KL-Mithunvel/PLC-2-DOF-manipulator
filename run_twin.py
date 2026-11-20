@@ -9,6 +9,7 @@
   python run_twin.py --mocap 0 --mocap-calib mocap/camera.json   camera tracking of the AprilTags (docs/MOCAP_PLAN.md)
   python run_twin.py --power sim                    simulated per-motor power meters driven by the twin (no hardware)
   python run_twin.py --power COM5@9600              real PZEM-017 meters on a USB-RS485 adapter (docs/POWER_METER_PLAN.md)
+  python run_twin.py --sensors esp-sim              simulated ESP32 + INA226 logger (firmware algorithm, register-level chip model) driven by the twin
   python run_twin.py --sensors udp:9100             add the motor current/voltage sensor feed (see docs/LIVE_DATA_PLAN.md)
 """
 import argparse
@@ -63,7 +64,14 @@ def setup(hub):
         from mocap.tracker import Camera
         hub.register("mocap", MocapSource.from_spec(a.mocap, Camera.load(a.mocap_calib), hub.twin.cfg).start())
         print(f"Motion capture from {a.mocap}")
-    if a.sensors:
+    if a.sensors == "esp-sim":
+        from live.ina226 import EspSim
+        from live.sensors import SensorSource
+        src = SensorSource(lambda stop: iter(()), label="esp-sim")
+        hub.register("sensors", src.start())
+        hub.tickers.append(EspSim(hub.twin, src))
+        print("Simulated ESP32 + INA226 logger driven by the twin (5 mOhm shunts, 100 samples/s per channel)")
+    elif a.sensors:
         try:
             from live.sensors import SensorSource
         except ImportError:

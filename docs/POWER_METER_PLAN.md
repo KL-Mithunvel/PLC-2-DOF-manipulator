@@ -16,6 +16,9 @@ The meters below come with shunts of 50 A and up. If the motors draw only a few 
 - peak current of a few amps: prefer the INA226 route (10 A range, 100x finer) or ask for a 10-20 A shunt.
 The CAN object 6078 current of the shoulder drive can also be added to the PDO map by editing the PLC program, but that changes the machine's program (see PLC integration).
 
+## Decision (2026-11-20): ESP32 + INA226 is the route
+The ESP32 + INA226 logger is the preferred route (fast sampling, cheap, already has a host side). It is built and tested in simulation: see [FIRMWARE.md](FIRMWARE.md) (`python run_twin.py --sensors esp-sim`), including the fixes found in the sketch. **Buying warning: most cheap INA226 breakouts carry a 0.1 ohm shunt (full scale 0.8 A); the motors draw several amps, so the shunt must be replaced or a 20 A board bought, and `SHUNT_OHMS` in the sketch set to the fitted value. The CJMCU-226 module linked below is the standard 0.1 ohm design unless the listing says otherwise: check before ordering.** The PZEM-017 route below stays as the PLC-compatible alternative and a slow cross-check.
+
 ## Two routes (they complement each other)
 
 ### Route A: Modbus RTU DC power meters (PLC-compatible, slow)

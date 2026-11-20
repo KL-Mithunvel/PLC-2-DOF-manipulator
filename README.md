@@ -40,7 +40,7 @@ bag/             bag files: timestamped multi-topic recordings (MCAP or JSON lin
 shadow/          shadow-and-diverge: alignment, residuals, detectors, shadow engine vs a recording, fault signatures (stages 4-6)
 analysis/        offline analysis of recordings: cycle timing, link latency, repeatability, CSV (stage 10)
 tools/           calibration, CAD import, run comparison, tag printing, demos
-firmware/        ESP32 sketch for the motor current/voltage sensors (untested on hardware)
+firmware/        ESP32 sketch for the motor current/voltage sensors (untested on hardware; simulated and contract-tested, docs/FIRMWARE.md)
 tests/           unit tests, HTTP tests, browser smoke test
 docs/            documentation (index: docs/README.md), paper, website, vendor manuals, drawings
 project_files/   KincoBuilder / KincoDTools project backups and the drive EDS file

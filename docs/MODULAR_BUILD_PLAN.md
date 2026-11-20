@@ -84,7 +84,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Gate.** Signature table plus confusion matrix.
 
 ## Stage 7 - Sensors (current/voltage) (`live/sensors.py` + firmware)
-**Status 2026-11-20: host side built for PZEM-017 power meters and tested on simulated meters** (RTU master, driver, source, twin-driven simulation, calibration check; see [POWER_METER_PLAN.md](POWER_METER_PLAN.md)). Hardware (meters, shunts, ESP32 firmware) not yet bought, wired or tested.
+**Status 2026-11-20: host side built for PZEM-017 power meters and tested on simulated meters** (RTU master, driver, source, twin-driven simulation, calibration check; see [POWER_METER_PLAN.md](POWER_METER_PLAN.md)). The ESP32 + INA226 route is also simulated (register-level chip model, Python port of the sketch, contract test against the `.ino`, see [FIRMWARE.md](FIRMWARE.md)); the sketch was corrected (read-order bug, averaging, chip check). Hardware (meters, shunts, ESP32) not yet bought, wired or tested.
 - Firmware sketch exists (`firmware/motor_sensors/`). Define the message format, calibration (offset/gain), timestamps.
 - **Tests.** `tools/sim_sensors` generator; calibration math; packet loss.
 - **Hardware step.** Wire, calibrate against a meter; log current for known payloads (B2).
