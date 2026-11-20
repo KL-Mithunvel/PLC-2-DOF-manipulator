@@ -98,6 +98,7 @@ Written 2026-11-20. Covers the research goals in [RESEARCH_ANGLES.md](RESEARCH_A
 - **Tests.** Mass and inertia sums match the CAD report; static loads match hand calculation; compare with the Ansys cases.
 
 ## Stage 10 - Analysis and reporting (module `analysis/`, offline)
+**Status 2026-11-20: built and tested on synthetic recordings** (cycle/step table, pick-to-pick period, link report, pick repeatability, CSV, CLI; see [ANALYSIS.md](ANALYSIS.md)). Plots are not built (CSV export instead).
 - Notebook-free scripts: load bags, align, plot, tabulate (run summary, divergence table, latency histograms, repeatability), export figures and CSV for papers.
 - **Tests.** Golden-file tests on a small saved bag.
 

@@ -10,6 +10,7 @@
 | [PLC_FINDINGS.md](PLC_FINDINGS.md) | Defects and quirks found by running the real ladder (with proposed fixes) |
 | [SCHEMA.md](SCHEMA.md) | JSON snapshot format shared by every data source |
 | [SHADOW.md](SHADOW.md) | Shadow toolkit and shadow engine: alignment, residuals, detectors, ladder conformance and open-loop comparison against a recording |
+| [ANALYSIS.md](ANALYSIS.md) | Offline analysis of bags: cycle and step timing, link report, pick repeatability, CSV |
 | [FAULTS.md](FAULTS.md) | Fault injection, divergence signatures, classifier and its measured accuracy (synthetic) |
 | [BAG_FORMAT.md](BAG_FORMAT.md) | Bag recordings: files, topics, `plc/raw` and `diag` payloads, crash safety |
 | [LIVE_PLC_USAGE.md](LIVE_PLC_USAGE.md) | Connecting to the real PLC over Modbus TCP (read-only) and the real HMI over VNC (view-only) |

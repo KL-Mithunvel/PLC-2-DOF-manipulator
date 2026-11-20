@@ -38,6 +38,7 @@ live/            read-only live PLC feed (Modbus TCP) and motor-sensor input
 mocap/           motion capture from camera images (ArUco tags)
 bag/             bag files: timestamped multi-topic recordings (MCAP or JSON lines) with run metadata, and replay
 shadow/          shadow-and-diverge: alignment, residuals, detectors, shadow engine vs a recording, fault signatures (stages 4-6)
+analysis/        offline analysis of recordings: cycle timing, link latency, repeatability, CSV (stage 10)
 tools/           calibration, CAD import, run comparison, tag printing, demos
 firmware/        ESP32 sketch for the motor current/voltage sensors (untested on hardware)
 tests/           unit tests, HTTP tests, browser smoke test
